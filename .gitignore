@@ -1,0 +1,92 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# VS Code and IDE settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Logs and temporary files
+logs/
+*.log
+tmp/
+temp/
+*.tmp
+
+# Synthetic telemetry and generated datasets
+data/generated/
+data/processed/
+data/telemetry/
+data/incidents/
+outputs/
+
+# Trained ML models and preprocessing artifacts
+models/
+checkpoints/
+*.keras
+*.h5
+*.pkl
+*.joblib
+*.safetensors
+*.pt
+*.pth
+*.onnx
+
+# Local ChromaDB storage
+chroma_db/
+chroma_storage/
+vector_store/
+
+# Local application databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker service volumes
+influxdb_data/
+grafana_data/
+postgres_data/
+redis_data/
+
+# Grafana local provisioning secrets
+grafana/secrets/
+grafana.ini.local
+
+# Celery runtime files
+celerybeat-schedule
+celerybeat.pid
+
+# Jupyter and Colab artifacts
+.ipynb_checkpoints/
+
+# Windows system files
+Thumbs.db
+Desktop.ini
+
+# Package and build artifacts
+build/
+dist/
+*.egg-info/
+
+# TensorFlow logs
+tensorboard_logs/

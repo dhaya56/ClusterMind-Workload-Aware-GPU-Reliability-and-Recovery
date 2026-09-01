@@ -1,0 +1,51 @@
+# Synthetic telemetry and data processing
+numpy
+pandas
+scipy
+
+# Anomaly detection
+scikit-learn
+tensorflow
+
+# Multi-agent orchestration and Ollama
+langgraph
+langchain
+langchain-community
+langchain-ollama
+
+# Runbook knowledge base
+chromadb
+llama-index
+llama-index-vector-stores-chroma
+llama-index-llms-ollama
+
+# InfluxDB time-series integration
+influxdb-client
+
+# Backend API
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+
+# Background task processing
+celery
+redis
+
+# Operational database
+SQLAlchemy
+psycopg[binary]
+
+# Configuration, notifications, and reliability
+python-dotenv
+httpx
+requests
+tenacity
+structlog
+truststore
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
