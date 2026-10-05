@@ -1,0 +1,69 @@
+project:
+  name: "ClusterMind"
+  environment: "development"
+  timezone: "UTC"
+
+cluster:
+  node_count: 10
+  gpus_per_node: 4
+  total_gpus: 40
+
+  identifiers:
+    node_prefix: "gpu-node"
+    gpu_prefix: "gpu"
+    node_number_width: 2
+    gpu_number_width: 2
+
+  hardware_profile:
+    gpu_model: "Synthetic Data Center GPU"
+    gpu_memory_gb: 80
+    max_power_watts: 350
+    max_sm_clock_mhz: 1800
+    max_memory_clock_mhz: 2000
+    nvlink_max_throughput_mbps: 50000
+
+workloads:
+  enabled_types:
+    - "llm_training"
+    - "llm_finetuning"
+    - "batch_inference"
+    - "distributed_training"
+
+  priorities:
+    - "low"
+    - "medium"
+    - "high"
+    - "critical"
+
+  statuses:
+    - "pending"
+    - "running"
+    - "degraded"
+    - "failed"
+    - "recovering"
+    - "completed"
+
+  minimum_active_jobs: 4
+  maximum_active_jobs: 12
+  minimum_gpus_per_job: 1
+  maximum_gpus_per_job: 4
+  checkpoint_probability: 0.75
+
+runtime:
+  default_mode: "development"
+  random_seed: 42
+  timestamp_format: "%Y-%m-%dT%H:%M:%SZ"
+
+  development:
+    duration_days: 7
+    sampling_interval_minutes: 5
+
+  production_demo:
+    duration_days: 30
+    sampling_interval_minutes: 1
+
+validation:
+  require_unique_node_ids: true
+  require_unique_gpu_ids_within_node: true
+  require_positive_sampling_interval: true
+  require_gpu_count_consistency: true
