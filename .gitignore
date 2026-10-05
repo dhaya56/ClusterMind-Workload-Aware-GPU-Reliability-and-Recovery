@@ -1,24 +1,32 @@
-# Python virtual environment
+# Python virtual environments
 .venv/
 venv/
 env/
+ENV/
 
 # Python cache and compiled files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Python tooling and test artifacts
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+.tox/
+.nox/
 
-# Environment variables and secrets
+# Environment variables, credentials, and secrets
 .env
 .env.*
 !.env.example
 *.pem
 *.key
+*.crt
 secrets/
 
 # VS Code and IDE settings
@@ -26,67 +34,77 @@ secrets/
 .idea/
 *.code-workspace
 
-# Logs and temporary files
+# Logs, process files, and temporary files
 logs/
 *.log
+*.pid
 tmp/
 temp/
 *.tmp
+*.bak
+*.swp
 
-# Synthetic telemetry and generated datasets
-data/generated/
-data/processed/
-data/telemetry/
-data/incidents/
-outputs/
+# Generated synthetic datasets
+data/generated/*
+!data/generated/.gitkeep
 
-# Trained ML models and preprocessing artifacts
-models/
-checkpoints/
-*.keras
-*.h5
+# Generated ML and runtime artifacts
+data/artifacts/*
+!data/artifacts/.gitkeep
+app/ml/artifacts/*
+!app/ml/artifacts/.gitkeep
 *.pkl
 *.joblib
+*.keras
+*.h5
 *.safetensors
 *.pt
 *.pth
 *.onnx
 
-# Local ChromaDB storage
-chroma_db/
-chroma_storage/
-vector_store/
+# Generated reports and output files
+outputs/
+reports/
+coverage.xml
+junit.xml
 
 # Local application databases
 *.db
 *.sqlite
 *.sqlite3
 
-# Docker service volumes
+# Locally mounted Docker service data
 influxdb_data/
 grafana_data/
-postgres_data/
+prometheus_data/
 redis_data/
+jaeger_data/
+ollama_data/
 
-# Grafana local provisioning secrets
-grafana/secrets/
+# Grafana local secrets and overrides
+infrastructure/grafana/secrets/
 grafana.ini.local
 
 # Celery runtime files
 celerybeat-schedule
+celerybeat-schedule.*
 celerybeat.pid
 
-# Jupyter and Colab artifacts
+# Jupyter artifacts
 .ipynb_checkpoints/
 
-# Windows system files
-Thumbs.db
-Desktop.ini
+# TensorBoard and optional LSTM artifacts
+tensorboard_logs/
+checkpoints/
 
-# Package and build artifacts
+# Python packaging and build artifacts
 build/
 dist/
 *.egg-info/
+.eggs/
+pip-wheel-metadata/
 
-# TensorFlow logs
-tensorboard_logs/
+# Operating-system files
+Thumbs.db
+Desktop.ini
+.DS_Store

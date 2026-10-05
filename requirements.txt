@@ -1,25 +1,18 @@
-# Synthetic telemetry and data processing
+# Core data processing
 numpy
 pandas
-scipy
+PyYAML
 
-# Anomaly detection
+# Machine learning and model artifacts
 scikit-learn
-tensorflow
+joblib
 
-# Multi-agent orchestration and Ollama
+# Multi-agent orchestration and local LLM integration
 langgraph
-langchain
-langchain-community
+langchain-core
 langchain-ollama
 
-# Runbook knowledge base
-chromadb
-llama-index
-llama-index-vector-stores-chroma
-llama-index-llms-ollama
-
-# InfluxDB time-series integration
+# InfluxDB OSS time-series integration
 influxdb-client
 
 # Backend API
@@ -27,20 +20,29 @@ fastapi
 uvicorn[standard]
 pydantic
 pydantic-settings
-python-multipart
 
-# Background task processing
+# Redis and Celery background task processing
 celery
 redis
 
-# Operational database
-SQLAlchemy
-psycopg[binary]
+# Prometheus application metrics
+prometheus-client
 
-# Configuration, notifications, and reliability
+# OpenTelemetry tracing and OTLP export
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-grpc
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-httpx
+opentelemetry-instrumentation-requests
+opentelemetry-instrumentation-celery
+opentelemetry-instrumentation-redis
+opentelemetry-instrumentation-logging
+opentelemetry-instrumentation-system-metrics
+
+# Configuration, HTTP integration, retries, logging, and certificates
 python-dotenv
 httpx
-requests
 tenacity
 structlog
 truststore
