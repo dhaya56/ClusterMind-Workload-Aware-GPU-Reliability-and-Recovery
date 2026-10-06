@@ -132,7 +132,7 @@ scoring:
     high: 0.75
     critical: 0.90
 
-  minimum_incident_severity: "medium"
+  minimum_incident_severity: "high"
 
 deterministic_overrides:
   uncorrectable_ecc_error:

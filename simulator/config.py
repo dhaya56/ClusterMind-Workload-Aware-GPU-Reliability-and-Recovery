@@ -305,10 +305,7 @@ def _validate_dataset(
                 f"{calculated_rows}"
             )
 
-    for distribution_name in (
-        "operating_state_distribution",
-        "scenario_distribution",
-    ):
+    for distribution_name in ("scenario_distribution",):
         distribution = _required_mapping(
             dataset_config,
             distribution_name,

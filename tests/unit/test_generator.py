@@ -129,7 +129,7 @@ def test_window_targets_reference_known_entities() -> None:
         assert window.end_index < generator.timestamp_count
 
 
-def test_window_progress_is_bounded_and_peaks_near_middle() -> None:
+def test_window_progress_is_monotonic_from_onset_to_peak() -> None:
     window = ScenarioWindow(
         window_id="INC-TEST-0001",
         scenario_name="thermal_throttling",
@@ -142,11 +142,21 @@ def test_window_progress_is_bounded_and_peaks_near_middle() -> None:
     )
 
     assert window.progress(10) == pytest.approx(0.0)
-    assert window.progress(15) == pytest.approx(1.0)
-    assert window.progress(20) == pytest.approx(0.0)
+    assert window.progress(15) == pytest.approx(0.5)
+    assert window.progress(20) == pytest.approx(1.0)
+
+    progress_values = [
+        window.progress(timestamp_index)
+        for timestamp_index in range(10, 21)
+    ]
+    assert progress_values == sorted(progress_values)
+    assert all(0.0 <= value <= 1.0 for value in progress_values)
 
     with pytest.raises(GenerationError, match="outside"):
         window.progress(9)
+
+    with pytest.raises(GenerationError, match="outside"):
+        window.progress(21)
 
 
 def test_small_chunk_has_expected_row_counts_and_schemas() -> None:

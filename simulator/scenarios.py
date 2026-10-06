@@ -78,7 +78,7 @@ SCENARIO_METADATA: dict[str, ScenarioMetadata] = {
         root_cause="allocated_gpu_without_useful_work",
         recovery_action="release_allocation_and_reschedule_workload",
         workload_impact="wasted_gpu_capacity",
-        supported_severities=("low", "medium", "high"),
+        supported_severities=("high",),
     ),
     "healthy_high_utilization": ScenarioMetadata(
         name="healthy_high_utilization",
@@ -224,6 +224,8 @@ def _effective_intensity(
     progress: float,
     severity_factor: float,
 ) -> float:
+    """Return smooth monotonic fault intensity from onset to peak."""
+
     smooth_progress = progress * progress * (3.0 - (2.0 * progress))
     return float(np.clip(smooth_progress * severity_factor, 0.0, 1.0))
 
@@ -309,11 +311,14 @@ def _apply_thermal_throttling(
     intensity: float,
     rng: np.random.Generator,
 ) -> None:
+    if intensity <= 0.0:
+        return
+
     gpu["gpu_temperature_c"] = _round_float(
         _clamp(
             float(gpu["gpu_temperature_c"])
             + (14.0 * intensity)
-            + rng.normal(0.0, 0.5),
+            + rng.normal(0.0, 0.5 * intensity),
             0.0,
             96.0,
         )
@@ -322,7 +327,7 @@ def _apply_thermal_throttling(
         _clamp(
             float(gpu["memory_temperature_c"])
             + (12.0 * intensity)
-            + rng.normal(0.0, 0.5),
+            + rng.normal(0.0, 0.5 * intensity),
             0.0,
             101.0,
         )
@@ -364,19 +369,18 @@ def _apply_ecc_memory_degradation(
     intensity: float,
     rng: np.random.Generator,
 ) -> None:
-    correctable_increment = max(
-        1,
-        int(round((2.0 + rng.integers(0, 4)) * (1.0 + 6.0 * intensity))),
-    )
+    if intensity <= 0.0:
+        return
+
     gpu["ecc_correctable_errors"] = max(
-        0,
-        int(gpu["ecc_correctable_errors"]) + correctable_increment,
+        int(gpu["ecc_correctable_errors"]),
+        int(np.ceil(35.0 * intensity)),
     )
 
     if intensity >= 0.72:
         gpu["ecc_uncorrectable_errors"] = max(
             1,
-            int(gpu["ecc_uncorrectable_errors"]) + 1,
+            int(gpu["ecc_uncorrectable_errors"]),
         )
         gpu["xid_error_code"] = 48
     elif intensity >= 0.42:
@@ -403,14 +407,15 @@ def _apply_memory_saturation(
     intensity: float,
     rng: np.random.Generator,
 ) -> None:
-    target_memory = 88.0 + (12.0 * intensity)
+    if intensity <= 0.0:
+        return
+
+    baseline_memory = float(gpu["memory_utilization_percent"])
+    target_memory = baseline_memory + ((100.0 - baseline_memory) * intensity)
 
     gpu["memory_utilization_percent"] = _round_float(
         _clamp(
-            max(
-                float(gpu["memory_utilization_percent"]),
-                target_memory + rng.normal(0.0, 0.6),
-            ),
+            target_memory + rng.normal(0.0, 0.6 * intensity),
             0.0,
             100.0,
         )
@@ -444,18 +449,16 @@ def _apply_power_capping(
     intensity: float,
     rng: np.random.Generator,
 ) -> None:
+    if intensity <= 0.0:
+        return
+
     oscillation = np.sin(intensity * np.pi * 8.0)
-    oscillation += rng.normal(0.0, 0.12)
+    oscillation += rng.normal(0.0, 0.12 * intensity)
+    baseline_power = float(gpu["power_draw_watts"])
+    target_power = baseline_power + ((345.0 - baseline_power) * intensity)
 
     gpu["power_draw_watts"] = _round_float(
-        _clamp(
-            max(
-                float(gpu["power_draw_watts"]),
-                315.0 + (30.0 * intensity),
-            ),
-            0.0,
-            350.0,
-        )
+        _clamp(target_power, 0.0, 350.0)
     )
     gpu["sm_clock_mhz"] = _round_float(
         _clamp(
@@ -482,7 +485,10 @@ def _apply_nvlink_degradation(
     intensity: float,
     rng: np.random.Generator,
 ) -> None:
-    throughput_reduction = 0.25 + (0.65 * intensity)
+    if intensity <= 0.0:
+        return
+
+    throughput_reduction = 0.90 * intensity
 
     gpu["nvlink_tx_mbps"] = _round_float(
         _clamp(
@@ -496,7 +502,7 @@ def _apply_nvlink_degradation(
         _clamp(
             float(gpu["nvlink_rx_mbps"])
             * (1.0 - throughput_reduction)
-            * rng.uniform(0.88, 1.02),
+            * rng.uniform(1.0 - (0.12 * intensity), 1.0),
             100.0,
             50000.0,
         )
@@ -505,7 +511,7 @@ def _apply_nvlink_degradation(
         _clamp(
             float(gpu["gpu_utilization_percent"])
             - (20.0 * intensity)
-            + rng.normal(0.0, 5.0),
+            + rng.normal(0.0, 5.0 * intensity),
             0.0,
             100.0,
         )
@@ -526,38 +532,50 @@ def _apply_idle_gpu_waste(
     intensity: float,
     rng: np.random.Generator,
 ) -> None:
-    target_utilization = 8.0 - (7.0 * intensity)
+    if intensity <= 0.0:
+        return
 
+    baseline_utilization = float(gpu["gpu_utilization_percent"])
+    utilization_reduction = min(0.98, 1.20 * intensity)
     gpu["gpu_utilization_percent"] = _round_float(
         _clamp(
-            target_utilization + rng.normal(0.0, 0.8),
-            0.0,
-            10.0,
-        )
-    )
-    gpu["memory_utilization_percent"] = _round_float(
-        _clamp(
-            max(
-                20.0,
-                float(gpu["memory_utilization_percent"])
-                * (0.75 + (0.20 * intensity)),
-            ),
+            baseline_utilization * (1.0 - utilization_reduction)
+            + rng.normal(0.0, 0.8 * intensity),
             0.0,
             100.0,
         )
     )
-    gpu["power_draw_watts"] = _round_float(
+
+    baseline_memory = float(gpu["memory_utilization_percent"])
+    retained_memory = max(20.0, baseline_memory * 0.90)
+    gpu["memory_utilization_percent"] = _round_float(
         _clamp(
-            65.0 + (25.0 * (1.0 - intensity)) + rng.normal(0.0, 2.0),
-            45.0,
-            110.0,
+            baseline_memory
+            + ((retained_memory - baseline_memory) * intensity),
+            0.0,
+            100.0,
         )
     )
+
+    baseline_power = float(gpu["power_draw_watts"])
+    target_power = 65.0
+    gpu["power_draw_watts"] = _round_float(
+        _clamp(
+            baseline_power + ((target_power - baseline_power) * intensity)
+            + rng.normal(0.0, 2.0 * intensity),
+            45.0,
+            350.0,
+        )
+    )
+
+    baseline_clock = float(gpu["sm_clock_mhz"])
+    target_clock = 850.0
     gpu["sm_clock_mhz"] = _round_float(
         _clamp(
-            850.0 + rng.normal(0.0, 30.0),
+            baseline_clock + ((target_clock - baseline_clock) * intensity)
+            + rng.normal(0.0, 30.0 * intensity),
             500.0,
-            1000.0,
+            1800.0,
         )
     )
 
@@ -586,29 +604,38 @@ def _apply_healthy_high_utilization(
     intensity: float,
     rng: np.random.Generator,
 ) -> None:
+    if intensity <= 0.0:
+        return
+
+    baseline_utilization = float(gpu["gpu_utilization_percent"])
+    target_utilization = 97.0
     gpu["gpu_utilization_percent"] = _round_float(
         _clamp(
-            max(
-                float(gpu["gpu_utilization_percent"]),
-                88.0 + (9.0 * intensity) + rng.normal(0.0, 1.0),
-            ),
+            baseline_utilization
+            + ((target_utilization - baseline_utilization) * intensity)
+            + rng.normal(0.0, 1.0 * intensity),
             0.0,
             99.0,
         )
     )
+
+    baseline_memory = float(gpu["memory_utilization_percent"])
+    target_memory = 90.0
     gpu["memory_utilization_percent"] = _round_float(
         _clamp(
-            max(
-                float(gpu["memory_utilization_percent"]),
-                72.0 + (18.0 * intensity),
-            ),
+            baseline_memory + ((target_memory - baseline_memory) * intensity),
             0.0,
             95.0,
         )
     )
+
+    baseline_temperature = float(gpu["gpu_temperature_c"])
+    target_temperature = 78.0
     gpu["gpu_temperature_c"] = _round_float(
         _clamp(
-            68.0 + (10.0 * intensity) + rng.normal(0.0, 0.8),
+            baseline_temperature
+            + ((target_temperature - baseline_temperature) * intensity)
+            + rng.normal(0.0, 0.8 * intensity),
             35.0,
             82.0,
         )
@@ -617,21 +644,27 @@ def _apply_healthy_high_utilization(
         _clamp(
             float(gpu["gpu_temperature_c"])
             + 4.0
-            + rng.normal(0.0, 0.5),
+            + rng.normal(0.0, 0.5 * intensity),
             38.0,
             88.0,
         )
     )
+
+    baseline_power = float(gpu["power_draw_watts"])
     gpu["power_draw_watts"] = _round_float(
         _clamp(
-            280.0 + (40.0 * intensity) + rng.normal(0.0, 4.0),
+            baseline_power + ((320.0 - baseline_power) * intensity)
+            + rng.normal(0.0, 4.0 * intensity),
             70.0,
             330.0,
         )
     )
+
+    baseline_clock = float(gpu["sm_clock_mhz"])
     gpu["sm_clock_mhz"] = _round_float(
         _clamp(
-            1650.0 + (100.0 * intensity) + rng.normal(0.0, 20.0),
+            baseline_clock + ((1750.0 - baseline_clock) * intensity)
+            + rng.normal(0.0, 20.0 * intensity),
             900.0,
             1800.0,
         )

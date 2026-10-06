@@ -18,11 +18,6 @@ generation_profiles:
     expected_gpu_rows: 1728000
     incident_count: 150
 
-operating_state_distribution:
-  normal: 0.85
-  degraded: 0.10
-  failure: 0.05
-
 output:
   directory: "data/generated"
   format: "csv"

@@ -41,7 +41,7 @@ class ScenarioWindow:
         return self.start_index <= timestamp_index <= self.end_index
 
     def progress(self, timestamp_index: int) -> float:
-        """Return triangular progress: onset -> peak -> recovery."""
+        """Return monotonic incident progress from onset to peak degradation."""
 
         if not self.contains(timestamp_index):
             raise GenerationError(
@@ -53,7 +53,7 @@ class ScenarioWindow:
             return 1.0
 
         position = (timestamp_index - self.start_index) / duration
-        return float(np.clip(1.0 - abs((2.0 * position) - 1.0), 0.0, 1.0))
+        return float(np.clip(position, 0.0, 1.0))
 
 
 class DatasetGenerator:
