@@ -13,7 +13,7 @@ services:
       DOCKER_INFLUXDB_INIT_ORG: "${INFLUXDB_ORG:-clustermind}"
       DOCKER_INFLUXDB_INIT_BUCKET: "${INFLUXDB_BUCKET:-gpu_telemetry}"
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "${INFLUXDB_TOKEN:-clustermind-development-token}"
-      DOCKER_INFLUXDB_INIT_RETENTION: "30d"
+      DOCKER_INFLUXDB_INIT_RETENTION: "0s"
     volumes:
       - clustermind-influxdb-data:/var/lib/influxdb2
       - clustermind-influxdb-config:/etc/influxdb2
