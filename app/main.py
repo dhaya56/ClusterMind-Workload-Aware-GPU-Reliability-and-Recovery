@@ -10,6 +10,7 @@ from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.observability.metrics import configure_metrics
 from app.schemas.health import RootResponse
+from app.observability.tracing import configure_tracing, shutdown_tracing
 
 
 @asynccontextmanager
@@ -18,7 +19,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     settings: Settings = app.state.settings
     settings.ensure_runtime_directories()
-    yield
+    try:
+        yield
+    finally:
+        shutdown_tracing()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -28,6 +32,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application = FastAPI(
         title=runtime_settings.app_name,
+        telemetry={"auto_configure": False},
         version=runtime_settings.app_version,
         description=(
             "Multi-agent GPU workload assurance and recovery platform for "
@@ -39,6 +44,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     application.state.settings = runtime_settings
+    configure_tracing(application, runtime_settings)
 
     application.add_middleware(
         CORSMiddleware,

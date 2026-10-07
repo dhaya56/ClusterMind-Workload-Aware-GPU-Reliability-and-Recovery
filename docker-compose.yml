@@ -1,0 +1,303 @@
+name: clustermind
+
+services:
+  influxdb:
+    image: influxdb:2.7
+    restart: unless-stopped
+    ports:
+      - "${CLUSTERMIND_INFLUXDB_HOST_PORT:-18086}:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: "setup"
+      DOCKER_INFLUXDB_INIT_USERNAME: "clustermind-admin"
+      DOCKER_INFLUXDB_INIT_PASSWORD: "clustermind-admin-password"
+      DOCKER_INFLUXDB_INIT_ORG: "${INFLUXDB_ORG:-clustermind}"
+      DOCKER_INFLUXDB_INIT_BUCKET: "${INFLUXDB_BUCKET:-gpu_telemetry}"
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "${INFLUXDB_TOKEN:-clustermind-development-token}"
+      DOCKER_INFLUXDB_INIT_RETENTION: "30d"
+    volumes:
+      - clustermind-influxdb-data:/var/lib/influxdb2
+      - clustermind-influxdb-config:/etc/influxdb2
+    healthcheck:
+      test:
+        - "CMD"
+        - "influx"
+        - "ping"
+        - "--host"
+        - "http://localhost:8086"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - clustermind-network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${CLUSTERMIND_REDIS_HOST_PORT:-16379}:6379"
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--save"
+      - "60"
+      - "1"
+    volumes:
+      - clustermind-redis-data:/data
+    healthcheck:
+      test:
+        - "CMD"
+        - "redis-cli"
+        - "ping"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - clustermind-network
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    restart: unless-stopped
+    ports:
+      - "${CLUSTERMIND_PROMETHEUS_HOST_PORT:-19090}:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - clustermind-prometheus-data:/prometheus
+    healthcheck:
+      test:
+        - "CMD"
+        - "wget"
+        - "--quiet"
+        - "--tries=1"
+        - "--spider"
+        - "http://localhost:9090/-/healthy"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - clustermind-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.65.0
+    restart: unless-stopped
+    ports:
+      - "${CLUSTERMIND_JAEGER_HOST_PORT:-16686}:16686"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      LOG_LEVEL: "info"
+    expose:
+      - "4317"
+      - "4318"
+    healthcheck:
+      test:
+        - "CMD"
+        - "wget"
+        - "--quiet"
+        - "--tries=1"
+        - "--spider"
+        - "http://localhost:16686"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - clustermind-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    restart: unless-stopped
+    command:
+      - "--config=/etc/otelcol-contrib/config.yml"
+    ports:
+      - "${CLUSTERMIND_OTEL_GRPC_HOST_PORT:-14317}:4317"
+      - "${CLUSTERMIND_OTEL_HTTP_HOST_PORT:-14318}:4318"
+      - "${CLUSTERMIND_OTEL_HEALTH_HOST_PORT:-13133}:13133"
+    volumes:
+      - ./infrastructure/otel/collector-config.yml:/etc/otelcol-contrib/config.yml:ro
+    depends_on:
+      jaeger:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD"
+        - "/otelcol-contrib"
+        - "validate"
+        - "--config=/etc/otelcol-contrib/config.yml"
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - clustermind-network
+
+  clustermind-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${CLUSTERMIND_API_HOST_PORT:-18000}:8000"
+    environment:
+      APP_NAME: "${APP_NAME:-ClusterMind}"
+      APP_VERSION: "${APP_VERSION:-0.1.0}"
+      APP_ENVIRONMENT: "${APP_ENVIRONMENT:-development}"
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "8000"
+      API_V1_PREFIX: "${API_V1_PREFIX:-/api/v1}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+
+      DATA_DIRECTORY: "/app/data/generated"
+      ARTIFACT_DIRECTORY: "/app/data/artifacts"
+      MODEL_ARTIFACT_DIRECTORY: "/app/app/ml/artifacts"
+      RUNBOOK_DIRECTORY: "/app/runbooks"
+
+      INFLUXDB_URL: "http://influxdb:8086"
+      INFLUXDB_ORG: "${INFLUXDB_ORG:-clustermind}"
+      INFLUXDB_BUCKET: "${INFLUXDB_BUCKET:-gpu_telemetry}"
+      INFLUXDB_TOKEN: "${INFLUXDB_TOKEN:-clustermind-development-token}"
+      INFLUXDB_TIMEOUT_MS: "${INFLUXDB_TIMEOUT_MS:-10000}"
+
+      REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+
+      OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.1:8b}"
+      OLLAMA_TIMEOUT_SECONDS: "${OLLAMA_TIMEOUT_SECONDS:-120}"
+
+      PROMETHEUS_METRICS_PATH: "${PROMETHEUS_METRICS_PATH:-/metrics}"
+
+      OTEL_ENABLED: "${OTEL_ENABLED:-true}"
+      OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-clustermind-api}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+
+      NTFY_ENABLED: "${NTFY_ENABLED:-false}"
+      NTFY_BASE_URL: "http://ntfy:80"
+      NTFY_TOPIC: "${NTFY_TOPIC:-clustermind-alerts}"
+
+      SMTP_ENABLED: "${SMTP_ENABLED:-false}"
+      CORS_ORIGINS: "http://localhost:${CLUSTERMIND_GRAFANA_HOST_PORT:-13000},http://localhost:${CLUSTERMIND_API_HOST_PORT:-18000}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; response = urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=3); raise SystemExit(0 if response.status == 200 else 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - clustermind-network
+
+  grafana:
+    image: grafana/grafana-oss:11.5.1
+    restart: unless-stopped
+    ports:
+      - "${CLUSTERMIND_GRAFANA_HOST_PORT:-13000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-clustermind-admin}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_PLUGINS_PUBLIC_KEY_RETRIEVAL_DISABLED: "true"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_SERVER_ROOT_URL: "http://localhost:${CLUSTERMIND_GRAFANA_HOST_PORT:-13000}"
+      INFLUXDB_TOKEN: "${INFLUXDB_TOKEN:-clustermind-development-token}"
+    volumes:
+      - clustermind-grafana-data:/var/lib/grafana
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - clustermind-network
+
+  ntfy:
+    image: binwiederhier/ntfy:v2.11.0
+    restart: unless-stopped
+    command:
+      - "serve"
+    environment:
+      NTFY_BASE_URL: "http://localhost:18080"
+      NTFY_CACHE_FILE: "/var/cache/ntfy/cache.db"
+      NTFY_AUTH_FILE: "/var/lib/ntfy/auth.db"
+      NTFY_BEHIND_PROXY: "true"
+    ports:
+      - "18080:80"
+    volumes:
+      - clustermind-ntfy-cache:/var/cache/ntfy
+      - clustermind-ntfy-data:/var/lib/ntfy
+    healthcheck:
+      test:
+        - "CMD"
+        - "wget"
+        - "--quiet"
+        - "--tries=1"
+        - "--spider"
+        - "http://localhost/v1/health"
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - clustermind-network
+
+networks:
+  clustermind-network:
+    name: clustermind-network
+    driver: bridge
+
+volumes:
+  clustermind-influxdb-data:
+    name: clustermind-influxdb-data
+
+  clustermind-influxdb-config:
+    name: clustermind-influxdb-config
+
+  clustermind-redis-data:
+    name: clustermind-redis-data
+
+  clustermind-prometheus-data:
+    name: clustermind-prometheus-data
+
+  clustermind-grafana-data:
+    name: clustermind-grafana-data
+
+  clustermind-ntfy-cache:
+    name: clustermind-ntfy-cache
+
+  clustermind-ntfy-data:
+    name: clustermind-ntfy-data

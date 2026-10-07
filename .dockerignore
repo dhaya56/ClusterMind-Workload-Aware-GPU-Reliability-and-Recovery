@@ -1,0 +1,75 @@
+# Git repository metadata
+.git
+.gitignore
+
+# Python virtual environments
+.venv
+venv
+env
+
+# Python cache and compiled files
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Test and coverage artifacts
+.coverage
+.coverage.*
+htmlcov
+coverage.xml
+junit.xml
+tests
+
+# IDE and editor settings
+.vscode
+.idea
+*.code-workspace
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets
+
+# Logs and temporary files
+logs
+*.log
+*.pid
+tmp
+temp
+*.tmp
+*.bak
+*.swp
+
+# Local Docker data directories
+influxdb_data
+grafana_data
+prometheus_data
+redis_data
+jaeger_data
+ollama_data
+
+# Python packaging artifacts
+build
+dist
+*.egg-info
+.eggs
+pip-wheel-metadata
+
+# Operating-system artifacts
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Notebook artifacts
+.ipynb_checkpoints
+notebooks
+
+# Optional training artifacts
+tensorboard_logs
+checkpoints
