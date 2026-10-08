@@ -9,19 +9,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.observability.metrics import configure_metrics
-from app.schemas.health import RootResponse
 from app.observability.tracing import configure_tracing, shutdown_tracing
+from app.schemas.health import RootResponse
+from app.services.incidents import get_incident_repository
+from app.services.workflow_runtime import WorkflowRuntime
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Initialize local runtime state for the API process."""
+    """Initialize and close the single-instance workflow runtime."""
 
     settings: Settings = app.state.settings
     settings.ensure_runtime_directories()
+    runtime = WorkflowRuntime(repository=get_incident_repository(settings))
+    app.state.workflow_runtime = runtime
     try:
         yield
     finally:
+        runtime.close()
+        app.state.workflow_runtime = None
         shutdown_tracing()
 
 
