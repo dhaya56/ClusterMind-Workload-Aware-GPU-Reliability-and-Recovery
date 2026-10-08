@@ -1,0 +1,75 @@
+schema_version: "1.0"
+runbook_id: "gpu.memory_saturation.v1"
+scenario: "memory_saturation"
+title: "GPU Memory Saturation"
+description: "GPU memory utilization approaches capacity and causes step-time, latency, or error-rate degradation."
+severity_policy:
+  supported: [low, medium, high, critical]
+  minimum_agent_confidence: 0.75
+symptoms:
+  - metric: memory_utilization_percent
+    operator: greater_than_or_equal
+    threshold: 95.0
+    unit: percent
+    weight: 0.45
+  - metric: step_duration_ms
+    operator: increase_from_baseline_percent
+    threshold: 20.0
+    unit: percent
+    weight: 0.25
+  - metric: error_rate_percent
+    operator: increase_from_baseline
+    threshold: 2.0
+    unit: percent
+    weight: 0.20
+  - metric: restart_count
+    operator: greater_than
+    threshold: 0
+    unit: count
+    weight: 0.10
+probable_causes:
+  - cause: "gpu_memory_capacity_exhaustion"
+    description: "The active model, batch, cache, or tensor footprint exceeds stable GPU memory capacity."
+    confidence_prior: 0.90
+  - cause: "workload_memory_leak"
+    description: "Memory is not released correctly across workload iterations."
+    confidence_prior: 0.60
+safety_checks:
+  - "Confirm the workload batch size and model memory requirement."
+  - "Verify a checkpoint before restarting or resizing the workload."
+  - "Check that reduced batch size will not violate workload constraints."
+recovery:
+  approval_required: true
+  checkpoint_required: true
+  expected_downtime_minutes: 10
+  risk_level: medium
+  actions:
+    - order: 1
+      action: reduce_batch_size
+      target: "affected_workload"
+      description: "Reduce the batch size to lower the GPU memory footprint."
+      reversible: true
+      rollback: "Restore the original batch size after capacity validation."
+    - order: 2
+      action: restart_workload
+      target: "affected_workload"
+      description: "Restart the workload using the validated reduced-memory configuration."
+      reversible: true
+      rollback: "Stop the restarted workload and restore its prior configuration."
+    - order: 3
+      action: resume_from_checkpoint
+      target: "affected_workload"
+      description: "Resume from the latest verified checkpoint."
+      reversible: true
+      rollback: "Stop execution and restore the previous checkpoint reference."
+    - order: 4
+      action: monitor
+      target: "affected_gpu"
+      description: "Monitor memory utilization, step duration, and error rate after restart."
+      reversible: true
+      rollback: "Return to standard monitoring after stabilization."
+rollback_plan: "Stop the resized workload, restore the original configuration, and migrate to a larger-capacity GPU if needed."
+escalation_conditions:
+  - "Memory utilization remains above 95 percent after batch reduction."
+  - "The workload repeatedly restarts or reports out-of-memory failures."
+  - "No valid checkpoint is available."

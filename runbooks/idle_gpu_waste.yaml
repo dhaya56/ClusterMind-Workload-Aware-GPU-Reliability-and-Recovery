@@ -1,0 +1,75 @@
+schema_version: "1.0"
+runbook_id: "gpu.idle_gpu_waste.v1"
+scenario: "idle_gpu_waste"
+title: "Idle GPU Capacity Waste"
+description: "A GPU remains allocated with substantial memory reservation but performs little useful work."
+severity_policy:
+  supported: [high]
+  minimum_agent_confidence: 0.85
+symptoms:
+  - metric: gpu_utilization_percent
+    operator: less_than_or_equal
+    threshold: 10.0
+    unit: percent
+    weight: 0.35
+  - metric: memory_utilization_percent
+    operator: greater_than_or_equal
+    threshold: 20.0
+    unit: percent
+    weight: 0.20
+  - metric: training_throughput
+    operator: decrease_from_baseline_percent
+    threshold: 80.0
+    unit: percent
+    weight: 0.25
+  - metric: tokens_per_second
+    operator: decrease_from_baseline_percent
+    threshold: 80.0
+    unit: percent
+    weight: 0.20
+probable_causes:
+  - cause: "allocated_gpu_without_useful_work"
+    description: "The scheduler allocation is active but the workload is stalled, blocked, or not using the GPU."
+    confidence_prior: 0.93
+  - cause: "workload_input_orchestration_stall"
+    description: "The workload is waiting for data, synchronization, or another external dependency."
+    confidence_prior: 0.67
+safety_checks:
+  - "Confirm low utilization persists and is not a short data-loading interval."
+  - "Verify that useful throughput is near zero before releasing allocation."
+  - "Preserve workload state before rescheduling."
+recovery:
+  approval_required: true
+  checkpoint_required: false
+  expected_downtime_minutes: 5
+  risk_level: low
+  actions:
+    - order: 1
+      action: monitor
+      target: "affected_workload"
+      description: "Confirm sustained idle behavior over the configured observation window."
+      reversible: true
+      rollback: "Return to standard monitoring if useful work resumes."
+    - order: 2
+      action: release_allocation
+      target: "affected_gpu"
+      description: "Release the unused GPU allocation after operator approval."
+      reversible: true
+      rollback: "Recreate the allocation if the workload is confirmed ready to run."
+    - order: 3
+      action: restart_workload
+      target: "affected_workload"
+      description: "Restart or reschedule the workload after checking external dependencies."
+      reversible: true
+      rollback: "Stop the restarted workload and restore the prior job specification."
+    - order: 4
+      action: monitor
+      target: "affected_workload"
+      description: "Verify that useful throughput resumes after rescheduling."
+      reversible: true
+      rollback: "Return to normal monitoring after validation."
+rollback_plan: "Recreate the prior allocation and restore the job specification if rescheduling fails."
+escalation_conditions:
+  - "The workload remains stalled after rescheduling."
+  - "The same job repeatedly allocates GPUs without useful work."
+  - "The cause is an unavailable data or synchronization dependency."

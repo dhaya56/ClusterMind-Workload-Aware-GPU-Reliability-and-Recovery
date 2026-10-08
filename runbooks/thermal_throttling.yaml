@@ -1,0 +1,80 @@
+schema_version: "1.0"
+runbook_id: "gpu.thermal_throttling.v1"
+scenario: "thermal_throttling"
+title: "GPU Thermal Throttling"
+description: "Progressive GPU or memory temperature increase accompanied by clock reduction and workload slowdown."
+severity_policy:
+  supported: [medium, high, critical]
+  minimum_agent_confidence: 0.75
+symptoms:
+  - metric: gpu_temperature_c
+    operator: increase_from_baseline
+    threshold: 8.0
+    unit: celsius
+    weight: 0.35
+  - metric: sm_clock_mhz
+    operator: decrease_from_baseline_percent
+    threshold: 12.0
+    unit: percent
+    weight: 0.30
+  - metric: step_duration_ms
+    operator: increase_from_baseline_percent
+    threshold: 15.0
+    unit: percent
+    weight: 0.20
+  - metric: training_throughput
+    operator: decrease_from_baseline_percent
+    threshold: 10.0
+    unit: percent
+    weight: 0.15
+probable_causes:
+  - cause: "gpu_thermal_throttling"
+    description: "Cooling capacity is insufficient for the current thermal load."
+    confidence_prior: 0.90
+  - cause: "node_cooling_degradation"
+    description: "Fan, airflow, heatsink, or ambient cooling performance has degraded."
+    confidence_prior: 0.70
+safety_checks:
+  - "Confirm the temperature trend persists across at least three consecutive samples."
+  - "Verify that ECC or XID hardware faults are not the primary signal."
+  - "Confirm that the destination node has sufficient GPU capacity before migration."
+recovery:
+  approval_required: true
+  checkpoint_required: true
+  expected_downtime_minutes: 15
+  risk_level: high
+  actions:
+    - order: 1
+      action: monitor
+      target: "affected_gpu"
+      description: "Confirm progressive temperature increase and clock reduction."
+      reversible: true
+      rollback: "Stop enhanced monitoring after the incident is resolved."
+    - order: 2
+      action: migrate_workload
+      target: "healthy_node"
+      description: "Move the affected workload to a healthy node with available GPU capacity."
+      reversible: true
+      rollback: "Move the workload back only after the original node passes thermal validation."
+    - order: 3
+      action: resume_from_checkpoint
+      target: "affected_workload"
+      description: "Resume the workload from the latest verified checkpoint."
+      reversible: true
+      rollback: "Stop the resumed workload and restore the previous checkpoint reference."
+    - order: 4
+      action: quarantine_node
+      target: "affected_node"
+      description: "Prevent new GPU workloads from being scheduled on the affected node."
+      reversible: true
+      rollback: "Return the node to service after cooling inspection and burn-in testing."
+    - order: 5
+      action: inspect_cooling
+      target: "affected_node"
+      description: "Inspect fans, airflow, heatsink contact, and ambient temperature."
+      reversible: false
+rollback_plan: "Stop the migrated workload if validation fails, preserve checkpoints, and escalate for manual placement."
+escalation_conditions:
+  - "GPU temperature remains above 90 C after workload migration."
+  - "An XID event or uncorrectable ECC error is observed."
+  - "No verified checkpoint is available."
