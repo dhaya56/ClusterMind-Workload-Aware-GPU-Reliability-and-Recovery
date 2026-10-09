@@ -51,3 +51,4 @@ truststore
 pytest
 pytest-asyncio
 pytest-cov
+streamlit==1.65.0
