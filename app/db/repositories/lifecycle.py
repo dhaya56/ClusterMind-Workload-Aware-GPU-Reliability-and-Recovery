@@ -28,6 +28,7 @@ class WorkflowLifecycleState:
     worker_id: str | None
     retry_count: int
     version: int
+    updated_at: datetime
     queued_at: datetime | None
     dispatched_at: datetime | None
     claimed_at: datetime | None
@@ -46,6 +47,7 @@ def _snapshot(row: WorkflowRun) -> WorkflowLifecycleState:
         worker_id=row.worker_id,
         retry_count=row.retry_count,
         version=row.version,
+        updated_at=row.updated_at,
         queued_at=row.queued_at,
         dispatched_at=row.dispatched_at,
         claimed_at=row.claimed_at,
@@ -120,6 +122,50 @@ class WorkflowLifecycleRepository:
                 available_at=row.updated_at,
             )
         )
+
+
+    def get_status(self, workflow_id: str) -> WorkflowLifecycleState:
+        normalized = workflow_id.strip()
+        if not normalized:
+            raise WorkflowRepositoryError("workflow_id cannot be blank")
+        try:
+            with self.runtime.read_session() as session:
+                row = session.scalar(
+                    select(WorkflowRun).where(
+                        WorkflowRun.workflow_id == normalized
+                    )
+                )
+                if row is None:
+                    raise WorkflowRepositoryNotFoundError(
+                        f"Workflow does not exist: {normalized}"
+                    )
+                return _snapshot(row)
+        except WorkflowRepositoryNotFoundError:
+            raise
+        except SQLAlchemyError as exc:
+            raise WorkflowRepositoryError(
+                f"Unable to read workflow lifecycle: {normalized}"
+            ) from exc
+
+    def list_statuses(
+        self,
+        *,
+        limit: int = 100,
+    ) -> tuple[WorkflowLifecycleState, ...]:
+        if isinstance(limit, bool) or not 1 <= limit <= 1000:
+            raise WorkflowRepositoryError("limit must be between 1 and 1000")
+        try:
+            with self.runtime.read_session() as session:
+                rows = session.scalars(
+                    select(WorkflowRun)
+                    .order_by(WorkflowRun.updated_at.desc())
+                    .limit(limit)
+                ).all()
+                return tuple(_snapshot(row) for row in rows)
+        except SQLAlchemyError as exc:
+            raise WorkflowRepositoryError(
+                "Unable to list workflow lifecycle records"
+            ) from exc
 
     def create_queued(
         self,

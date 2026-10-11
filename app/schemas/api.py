@@ -27,6 +27,29 @@ class AnalysisDispatchResponse(BaseModel):
     status_url: str
 
 
+class WorkflowStatusResponse(BaseModel):
+    """Durable workflow progress and optional completed aggregate."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_id: str
+    incident_id: str
+    status: str
+    current_stage: str
+    dispatch_status: str
+    task_id: str | None = None
+    worker_id: str | None = None
+    retry_count: int = Field(ge=0)
+    version: int = Field(ge=1)
+    queued_at: datetime | None = None
+    dispatched_at: datetime | None = None
+    claimed_at: datetime | None = None
+    last_heartbeat_at: datetime | None = None
+    updated_at: datetime
+    result_available: bool
+    result: WorkflowResult | None = None
+
+
 class WorkflowDecisionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -114,7 +137,7 @@ class OverviewResponse(BaseModel):
 class WorkflowListResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    items: list[WorkflowResult]
+    items: list[WorkflowStatusResponse]
     count: int = Field(ge=0)
     limit: int = Field(ge=1, le=1000)
 

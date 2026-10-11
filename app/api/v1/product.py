@@ -33,6 +33,7 @@ from app.schemas.api import (
     PlatformStatusResponse,
     WorkflowDecisionRequest,
     WorkflowListResponse,
+    WorkflowStatusResponse,
 )
 from app.services.incidents import IncidentRepositoryError
 from app.services.ollama import OllamaService, OllamaServiceError
@@ -68,6 +69,61 @@ def _repository_error(exc: IncidentRepositoryError) -> HTTPException:
         else status.HTTP_503_SERVICE_UNAVAILABLE
     )
     return HTTPException(status_code=code, detail=message)
+
+
+def _result_is_available(status_value: str) -> bool:
+    return status_value not in {"created", "queued", "running"}
+
+
+def _json_workflow_status(result: WorkflowResult) -> WorkflowStatusResponse:
+    return WorkflowStatusResponse(
+        workflow_id=result.workflow_id,
+        incident_id=result.incident_id,
+        status=result.status,
+        current_stage=str(result.metadata.get("route") or result.status),
+        dispatch_status="not_dispatched",
+        retry_count=0,
+        version=1,
+        updated_at=result.updated_at,
+        result_available=True,
+        result=result,
+    )
+
+
+async def _workflow_status_response(
+    state,
+    *,
+    runtime: WorkflowRuntime,
+) -> WorkflowStatusResponse:
+    result_available = _result_is_available(state.status)
+    result = None
+    if result_available:
+        try:
+            result = await run_in_threadpool(
+                runtime.workflow.store.get,
+                state.workflow_id,
+            )
+        except (WorkflowNotFoundError, WorkflowError):
+            result_available = False
+
+    return WorkflowStatusResponse(
+        workflow_id=state.workflow_id,
+        incident_id=state.incident_id,
+        status=state.status,
+        current_stage=state.current_stage,
+        dispatch_status=state.dispatch_status,
+        task_id=state.task_id,
+        worker_id=state.worker_id,
+        retry_count=state.retry_count,
+        version=state.version,
+        queued_at=state.queued_at,
+        dispatched_at=state.dispatched_at,
+        claimed_at=state.claimed_at,
+        last_heartbeat_at=state.last_heartbeat_at,
+        updated_at=state.updated_at,
+        result_available=result_available,
+        result=result,
+    )
 
 
 @router.get("/overview", response_model=OverviewResponse)
@@ -206,26 +262,95 @@ async def analyze_incident(
 
 @router.get("/workflows", response_model=WorkflowListResponse)
 async def list_workflows(
+    request: Request,
     runtime: RuntimeDependency,
     limit: int = Query(default=100, ge=1, le=1000),
 ) -> WorkflowListResponse:
+    database_runtime = getattr(request.app.state, "database_runtime", None)
+    if isinstance(database_runtime, DatabaseRuntime) and (
+        runtime.workflow_store_detail == "postgresql"
+    ):
+        lifecycle = WorkflowLifecycleRepository(database_runtime)
+        try:
+            states = await run_in_threadpool(
+                lifecycle.list_statuses,
+                limit=limit,
+            )
+            items = [
+                await _workflow_status_response(
+                    state,
+                    runtime=runtime,
+                )
+                for state in states
+            ]
+        except WorkflowRepositoryError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Workflow records are temporarily unavailable",
+            ) from exc
+        return WorkflowListResponse(
+            items=items,
+            count=len(items),
+            limit=limit,
+        )
+
     try:
-        items = await run_in_threadpool(runtime.workflow.store.list, limit=limit)
+        results = await run_in_threadpool(
+            runtime.workflow.store.list,
+            limit=limit,
+        )
     except WorkflowError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Workflow records are temporarily unavailable",
         ) from exc
-    return WorkflowListResponse(items=list(items), count=len(items), limit=limit)
+    items = [
+        _json_workflow_status(result)
+        for result in results
+    ]
+    return WorkflowListResponse(items=items, count=len(items), limit=limit)
 
 
-@router.get("/workflows/{workflow_id}", response_model=WorkflowResult)
+@router.get(
+    "/workflows/{workflow_id}",
+    response_model=WorkflowStatusResponse,
+)
 async def workflow_detail(
     workflow_id: str,
+    request: Request,
     runtime: RuntimeDependency,
-) -> WorkflowResult:
+) -> WorkflowStatusResponse:
+    database_runtime = getattr(request.app.state, "database_runtime", None)
+    if isinstance(database_runtime, DatabaseRuntime) and (
+        runtime.workflow_store_detail == "postgresql"
+    ):
+        lifecycle = WorkflowLifecycleRepository(database_runtime)
+        try:
+            state = await run_in_threadpool(
+                lifecycle.get_status,
+                workflow_id,
+            )
+            return await _workflow_status_response(
+                state,
+                runtime=runtime,
+            )
+        except WorkflowRepositoryNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(exc),
+            ) from exc
+        except WorkflowRepositoryError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Workflow record is temporarily unavailable",
+            ) from exc
+
     try:
-        return await run_in_threadpool(runtime.workflow.store.get, workflow_id)
+        result = await run_in_threadpool(
+            runtime.workflow.store.get,
+            workflow_id,
+        )
+        return _json_workflow_status(result)
     except WorkflowNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
