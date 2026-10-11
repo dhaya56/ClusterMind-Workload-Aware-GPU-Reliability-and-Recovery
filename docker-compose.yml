@@ -241,6 +241,48 @@ services:
     networks:
       - clustermind-network
 
+  clustermind-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command:
+      - "python"
+      - "-m"
+      - "celery"
+      - "-A"
+      - "app.tasks.celery_app:celery_app"
+      - "beat"
+      - "--loglevel=INFO"
+      - "--pidfile=/tmp/celerybeat.pid"
+      - "--schedule=/tmp/celerybeat-schedule"
+    environment:
+      APP_NAME: "${APP_NAME:-ClusterMind}"
+      APP_VERSION: "${APP_VERSION:-0.1.0}"
+      APP_ENVIRONMENT: "${APP_ENVIRONMENT:-development}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+      CELERY_OUTBOX_INTERVAL_SECONDS: "${CELERY_OUTBOX_INTERVAL_SECONDS:-15}"
+      OTEL_ENABLED: "false"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "test -s /tmp/celerybeat.pid && kill -0 $$(cat /tmp/celerybeat.pid)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    stop_grace_period: 20s
+    security_opt:
+      - "no-new-privileges:true"
+    networks:
+      - clustermind-network
+
   clustermind-worker:
     build:
       context: .

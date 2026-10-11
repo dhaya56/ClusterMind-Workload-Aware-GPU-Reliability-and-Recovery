@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     celery_result_expires_seconds: int = Field(default=3600, ge=60, le=86400)
     celery_visibility_timeout_seconds: int = Field(default=720, ge=60, le=86400)
     celery_worker_service_name: str = "clustermind-worker"
+    celery_outbox_interval_seconds: int = Field(default=15, ge=5, le=3600)
 
 
     database_url: str = (

@@ -41,10 +41,25 @@ celery_app.conf.update(
             "queue": ANALYSIS_QUEUE,
             "routing_key": ANALYSIS_QUEUE,
         },
+        "clustermind.publish_outbox": {
+            "queue": ANALYSIS_QUEUE,
+            "routing_key": ANALYSIS_QUEUE,
+        },
     },
     task_acks_late=True,
     task_acks_on_failure_or_timeout=True,
     task_reject_on_worker_lost=True,
+    beat_schedule={
+        "publish-outbox-events": {
+            "task": "clustermind.publish_outbox",
+            "schedule": settings.celery_outbox_interval_seconds,
+            "kwargs": {"limit": 20},
+            "options": {
+                "queue": ANALYSIS_QUEUE,
+                "routing_key": ANALYSIS_QUEUE,
+            },
+        },
+    },
     worker_prefetch_multiplier=1,
     worker_concurrency=settings.celery_worker_concurrency,
     task_soft_time_limit=settings.celery_task_soft_time_limit_seconds,
