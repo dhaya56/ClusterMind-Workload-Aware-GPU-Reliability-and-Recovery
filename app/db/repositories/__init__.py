@@ -13,3 +13,8 @@ __all__ = [
     "WorkflowRepositoryError",
     "WorkflowRepositoryNotFoundError",
 ]
+
+from app.db.repositories.lifecycle import (
+    WorkflowLifecycleRepository,
+    WorkflowLifecycleState,
+)
