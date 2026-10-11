@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
+from app.db import DatabaseRuntime
 from app.observability.metrics import configure_metrics
 from app.observability.tracing import configure_tracing, shutdown_tracing
 from app.schemas.health import RootResponse
@@ -21,13 +22,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     settings: Settings = app.state.settings
     settings.ensure_runtime_directories()
-    runtime = WorkflowRuntime(repository=get_incident_repository(settings))
-    app.state.workflow_runtime = runtime
+    database_runtime = DatabaseRuntime(settings)
+    workflow_runtime: WorkflowRuntime | None = None
+    app.state.database_runtime = database_runtime
+    app.state.workflow_runtime = None
     try:
+        workflow_runtime = WorkflowRuntime(
+            repository=get_incident_repository(settings)
+        )
+        app.state.workflow_runtime = workflow_runtime
         yield
     finally:
-        runtime.close()
+        if workflow_runtime is not None:
+            workflow_runtime.close()
         app.state.workflow_runtime = None
+        database_runtime.dispose()
+        app.state.database_runtime = None
         shutdown_tracing()
 
 

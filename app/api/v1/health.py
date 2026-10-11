@@ -6,10 +6,11 @@ from pathlib import Path
 from time import perf_counter
 
 import httpx
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from redis.asyncio import Redis
 
 from app.core.config import Settings, get_settings
+from app.db import DatabaseRuntime
 from app.schemas.health import ComponentHealth, HealthResponse, ReadinessResponse
 
 
@@ -124,6 +125,39 @@ async def _http_health(
         )
 
 
+async def _database_health(request: Request) -> ComponentHealth:
+    started_at = perf_counter()
+    runtime = getattr(request.app.state, "database_runtime", None)
+    if not isinstance(runtime, DatabaseRuntime):
+        return ComponentHealth(
+            name="postgresql",
+            status="unavailable",
+            message="Database runtime is not initialized",
+            latency_ms=_elapsed_ms(started_at),
+        )
+
+    result = await asyncio.to_thread(runtime.health)
+    if result.status != "healthy":
+        return ComponentHealth(
+            name="postgresql",
+            status="unavailable",
+            message=(
+                "Database readiness query failed: "
+                f"{result.error_type or 'unknown error'}"
+            ),
+            latency_ms=result.latency_ms,
+        )
+    return ComponentHealth(
+        name="postgresql",
+        status="healthy",
+        message=(
+            f"Database {result.database} is available "
+            f"on PostgreSQL {result.server_version}"
+        ),
+        latency_ms=result.latency_ms,
+    )
+
+
 async def _influxdb_health(settings: Settings) -> ComponentHealth:
     return await _http_health(
         name="influxdb",
@@ -181,7 +215,7 @@ async def _redis_health(settings: Settings) -> ComponentHealth:
 def _overall_readiness(
     components: list[ComponentHealth],
 ) -> tuple[str, bool]:
-    required_names = {"dataset", "detector"}
+    required_names = {"dataset", "detector", "postgresql"}
     required_unavailable = any(
         component.name in required_names and component.status == "unavailable"
         for component in components
@@ -217,6 +251,7 @@ async def health(
 
 @router.get("/readiness", response_model=ReadinessResponse)
 async def readiness(
+    request: Request,
     settings: Settings = Depends(get_settings),
 ) -> ReadinessResponse:
     """Return local artifact and external dependency readiness states."""
@@ -226,6 +261,7 @@ async def readiness(
         _detector_health(settings),
     ]
     external_components = await asyncio.gather(
+        _database_health(request),
         _influxdb_health(settings),
         _redis_health(settings),
         _ollama_health(settings),

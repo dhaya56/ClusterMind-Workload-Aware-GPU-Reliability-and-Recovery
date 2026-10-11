@@ -55,6 +55,15 @@ class Settings(BaseSettings):
     )
     database_connect_timeout_seconds: int = Field(default=5, ge=1, le=60)
 
+    database_pool_size: int = Field(default=5, ge=1, le=50)
+    database_max_overflow: int = Field(default=10, ge=0, le=100)
+    database_pool_timeout_seconds: int = Field(default=10, ge=1, le=120)
+    database_pool_recycle_seconds: int = Field(
+        default=1800,
+        ge=60,
+        le=86400,
+    )
+
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b"
     ollama_timeout_seconds: int = Field(default=120, ge=1)
