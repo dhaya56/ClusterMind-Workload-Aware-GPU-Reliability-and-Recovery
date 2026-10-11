@@ -11,8 +11,8 @@
   ],
   "timezone": "utc",
   "schemaVersion": 40,
-  "version": 1,
-  "refresh": "30s",
+  "version": 2,
+  "refresh": "1m",
   "editable": true,
   "graphTooltip": 1,
   "fiscalYearStartMonth": 0,
@@ -58,8 +58,8 @@
         "sort": 1,
         "current": {
           "selected": true,
-          "text": "All",
-          "value": "All"
+          "text": "gpu-node-05",
+          "value": "gpu-node-05"
         },
         "options": []
       },
@@ -79,8 +79,8 @@
         "sort": 1,
         "current": {
           "selected": true,
-          "text": "All",
-          "value": "All"
+          "text": "gpu-01",
+          "value": "gpu-01"
         },
         "options": []
       }
@@ -218,7 +218,7 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Ground-truth incidents",
+      "title": "Historical incidents",
       "description": "Synthetic labeled incidents available for agent evaluation.",
       "datasource": {
         "type": "influxdb",
@@ -233,7 +233,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_incidents\" and r._field == \"gpu_hours_lost\")\n  |> count(column: \"_value\")",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_incidents\" and r._field == \"gpu_hours_lost\")\n  |> group()\n  |> count(column: \"_value\")",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -268,17 +268,17 @@
           "fields": ""
         },
         "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
         "wideLayout": true
       }
     },
     {
       "id": 5,
       "type": "stat",
-      "title": "Detector candidates",
+      "title": "Detector anomaly samples",
       "description": "High/critical candidates forwarded by the telemetry layer.",
       "datasource": {
         "type": "influxdb",
@@ -293,7 +293,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"detector_results\" and r._field == \"predicted_anomaly\" and r._value == true)\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> count(column: \"_value\")",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"detector_results\" and r._field == \"predicted_anomaly\" and r._value == true)\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> group()\n  |> count(column: \"_value\")",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -328,10 +328,10 @@
           "fields": ""
         },
         "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
         "wideLayout": true
       }
     },
@@ -353,7 +353,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"gpu_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> mean(column: \"_value\")",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"gpu_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> group()\n  |> mean(column: \"_value\")",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -388,17 +388,17 @@
           "fields": ""
         },
         "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
         "wideLayout": true
       }
     },
     {
       "id": 7,
       "type": "gauge",
-      "title": "Cluster health score",
+      "title": "Historical GPU health score",
       "description": "State-based health score for the selected node/GPU scope.",
       "datasource": {
         "type": "influxdb",
@@ -413,7 +413,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"gpu_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> map(fn: (r) => ({ r with _value: if r.operating_state == \"normal\" then 100.0 else if r.operating_state == \"degraded\" then 55.0 else 10.0 }))\n  |> mean(column: \"_value\")",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"gpu_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> map(fn: (r) => ({ r with _value: if r.operating_state == \"normal\" then 100.0 else if r.operating_state == \"degraded\" then 55.0 else 10.0 }))\n  |> group()\n  |> mean(column: \"_value\")",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -457,13 +457,17 @@
           "fields": ""
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
       "id": 8,
       "type": "stat",
-      "title": "API availability",
+      "title": "Live API availability",
       "description": "Prometheus visibility of the ClusterMind API.",
       "datasource": {
         "type": "prometheus",
@@ -482,7 +486,10 @@
           "datasource": {
             "type": "prometheus",
             "uid": "clustermind-prometheus"
-          }
+          },
+          "instant": true,
+          "range": false,
+          "expr": "max(clustermind_application_info)"
         }
       ],
       "fieldConfig": {
@@ -518,7 +525,8 @@
         "graphMode": "area",
         "justifyMode": "auto",
         "wideLayout": true
-      }
+      },
+      "timeFrom": "15m"
     },
     {
       "id": 9,
@@ -551,7 +559,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"gpu_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"gpu_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -569,7 +577,7 @@
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 16,
+            "fillOpacity": 12,
             "gradientMode": "opacity",
             "showPoints": "never",
             "spanNulls": true,
@@ -597,17 +605,15 @@
       },
       "options": {
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
         },
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "mean"
-          ]
+          "calcs": [],
+          "showLegend": true
         }
       }
     },
@@ -629,7 +635,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and (r._field == \"gpu_temperature_c\" or r._field == \"memory_temperature_c\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id + \" / \" + r._field }))",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and (r._field == \"gpu_temperature_c\" or r._field == \"memory_temperature_c\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id + \" / \" + r._field }))",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -647,7 +653,7 @@
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 16,
+            "fillOpacity": 12,
             "gradientMode": "opacity",
             "showPoints": "never",
             "spanNulls": true,
@@ -675,17 +681,15 @@
       },
       "options": {
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
         },
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "mean"
-          ]
+          "calcs": [],
+          "showLegend": true
         }
       }
     },
@@ -707,7 +711,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"memory_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"memory_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -725,7 +729,7 @@
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 16,
+            "fillOpacity": 12,
             "gradientMode": "opacity",
             "showPoints": "never",
             "spanNulls": true,
@@ -753,17 +757,15 @@
       },
       "options": {
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
         },
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "mean"
-          ]
+          "calcs": [],
+          "showLegend": true
         }
       }
     },
@@ -785,7 +787,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"power_draw_watts\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"power_draw_watts\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -803,7 +805,7 @@
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 16,
+            "fillOpacity": 12,
             "gradientMode": "opacity",
             "showPoints": "never",
             "spanNulls": true,
@@ -831,17 +833,15 @@
       },
       "options": {
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
         },
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "mean"
-          ]
+          "calcs": [],
+          "showLegend": true
         }
       }
     },
@@ -863,7 +863,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"sm_clock_mhz\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"sm_clock_mhz\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -881,7 +881,7 @@
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 16,
+            "fillOpacity": 12,
             "gradientMode": "opacity",
             "showPoints": "never",
             "spanNulls": true,
@@ -909,17 +909,15 @@
       },
       "options": {
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
         },
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "mean"
-          ]
+          "calcs": [],
+          "showLegend": true
         }
       }
     },
@@ -941,7 +939,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and (r._field == \"nvlink_tx_mbps\" or r._field == \"nvlink_rx_mbps\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id + \" / \" + r._field }))",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and (r._field == \"nvlink_tx_mbps\" or r._field == \"nvlink_rx_mbps\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id + \" / \" + r._field }))",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -959,7 +957,7 @@
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 16,
+            "fillOpacity": 12,
             "gradientMode": "opacity",
             "showPoints": "never",
             "spanNulls": true,
@@ -987,25 +985,23 @@
       },
       "options": {
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
         },
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "mean"
-          ]
+          "calcs": [],
+          "showLegend": true
         }
       }
     },
     {
       "id": 16,
       "type": "timeseries",
-      "title": "ECC error progression",
-      "description": "Hardware safety overrides promote uncorrectable ECC events to critical.",
+      "title": "ECC errors \u2014 zero means healthy",
+      "description": "Cumulative correctable and uncorrectable ECC error counts. A flat zero line means no ECC errors were observed for the selected GPU.",
       "datasource": {
         "type": "influxdb",
         "uid": "clustermind-influxdb"
@@ -1019,7 +1015,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and (r._field == \"ecc_correctable_errors\" or r._field == \"ecc_uncorrectable_errors\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id + \" / \" + r._field }))",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and (r._field == \"ecc_correctable_errors\" or r._field == \"ecc_uncorrectable_errors\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id + \" / \" + r._field }))",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -1036,10 +1032,10 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 16,
+            "lineWidth": 3,
+            "fillOpacity": 8,
             "gradientMode": "opacity",
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": true,
             "axisPlacement": "auto",
             "axisLabel": "",
@@ -1049,7 +1045,9 @@
             },
             "thresholdsStyle": {
               "mode": "line"
-            }
+            },
+            "axisSoftMin": -0.25,
+            "axisSoftMax": 2
           },
           "thresholds": {
             "mode": "absolute",
@@ -1059,23 +1057,22 @@
                 "value": null
               }
             ]
-          }
+          },
+          "min": 0
         },
         "overrides": []
       },
       "options": {
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
         },
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "mean"
-          ]
+          "calcs": [],
+          "showLegend": true
         }
       }
     },
@@ -1110,7 +1107,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"workload_telemetry\" and (r._field == \"training_throughput\" or r._field == \"tokens_per_second\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.assigned_node == \"${node}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.job_id + \" / \" + r._field }))",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"workload_telemetry\" and (r._field == \"training_throughput\" or r._field == \"tokens_per_second\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.assigned_node == \"${node}\")\n  |> drop(columns: [\"incident_id\", \"workload_status\", \"job_type\"])\n  |> group(columns: [\"job_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.job_id + \" / \" + r._field }))",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -1160,13 +1157,10 @@
           "sort": "desc"
         },
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "mean"
-          ]
+          "calcs": [],
+          "showLegend": true
         }
       }
     },
@@ -1188,7 +1182,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"detector_results\" and r._field == \"anomaly_score\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"detector_results\" and r._field == \"anomaly_score\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -1206,7 +1200,7 @@
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 16,
+            "fillOpacity": 12,
             "gradientMode": "opacity",
             "showPoints": "never",
             "spanNulls": true,
@@ -1234,17 +1228,15 @@
       },
       "options": {
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
         },
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "mean"
-          ]
+          "calcs": [],
+          "showLegend": true
         }
       }
     },
@@ -1266,7 +1258,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_incidents\" and r._field == \"gpu_hours_lost\")\n  |> keep(columns: [\"_time\", \"incident_id\", \"node_id\", \"gpu_id\", \"incident_type\", \"severity\", \"root_cause\", \"affected_workload\", \"recovery_action\", \"incident_status\", \"_value\"])\n  |> rename(columns: {_time: \"Time\", _value: \"gpu_hours_lost\"})\n  |> sort(columns: [\"Time\"], desc: true)",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_incidents\" and r._field == \"gpu_hours_lost\")\n  |> group()\n  |> keep(columns: [\"_time\", \"incident_id\", \"node_id\", \"gpu_id\", \"incident_type\", \"severity\", \"root_cause\", \"affected_workload\", \"recovery_action\", \"incident_status\", \"_value\"])\n  |> rename(columns: {_time: \"Time\", _value: \"gpu_hours_lost\"})\n  |> sort(columns: [\"Time\"], desc: true)",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
@@ -1358,7 +1350,15 @@
             "displayName": "Time",
             "desc": true
           }
-        ]
+        ],
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
       }
     },
     {
@@ -1425,7 +1425,8 @@
           "datasource": {
             "type": "prometheus",
             "uid": "clustermind-prometheus"
-          }
+          },
+          "expr": "sum(rate(clustermind_http_requests_total[5m])) by (route)"
         }
       ],
       "fieldConfig": {
@@ -1479,7 +1480,8 @@
             "mean"
           ]
         }
-      }
+      },
+      "timeFrom": "15m"
     },
     {
       "id": 25,
@@ -1503,7 +1505,8 @@
           "datasource": {
             "type": "prometheus",
             "uid": "clustermind-prometheus"
-          }
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(clustermind_http_request_duration_seconds_bucket[5m])) by (le, route))"
         }
       ],
       "fieldConfig": {
@@ -1557,7 +1560,8 @@
             "mean"
           ]
         }
-      }
+      },
+      "timeFrom": "15m"
     },
     {
       "id": 26,
@@ -1593,7 +1597,7 @@
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_telemetry\" and (r._field == \"cpu_utilization_percent\" or r._field == \"host_memory_percent\" or r._field == \"fan_speed_percent\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r._field }))",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_telemetry\" and (r._field == \"cpu_utilization_percent\" or r._field == \"host_memory_percent\" or r._field == \"fan_speed_percent\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\")\n  |> drop(columns: [\"incident_id\", \"node_health_status\"])\n  |> group(columns: [\"node_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r._field }))",
           "datasource": {
             "type": "influxdb",
             "uid": "clustermind-influxdb"
