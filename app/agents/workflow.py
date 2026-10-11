@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from threading import RLock
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, Protocol, TypedDict
 from uuid import NAMESPACE_URL, uuid5
 
 from langgraph.graph import END, START, StateGraph
@@ -58,6 +58,12 @@ class AgentWorkflowState(TypedDict, total=False):
     recovery_plan: dict[str, Any]
     errors: list[str]
     trace_id: str | None
+
+
+class WorkflowStoreProtocol(Protocol):
+    def save(self, result: WorkflowResult) -> None: ...
+    def get(self, workflow_id: str) -> WorkflowResult: ...
+    def list(self, *, limit: int = 100) -> tuple[WorkflowResult, ...]: ...
 
 
 class WorkflowStore:
@@ -147,7 +153,7 @@ class ClusterMindWorkflow:
         self,
         *,
         repository: IncidentRepository | None = None,
-        store: WorkflowStore | None = None,
+        store: WorkflowStoreProtocol | None = None,
         store_directory: Path | None = None,
     ) -> None:
         self.repository = repository or get_incident_repository()

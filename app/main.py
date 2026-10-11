@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.db import DatabaseRuntime
+from app.db.repositories import PostgresWorkflowRepository
 from app.observability.metrics import configure_metrics
 from app.observability.tracing import configure_tracing, shutdown_tracing
 from app.schemas.health import RootResponse
@@ -27,8 +28,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.database_runtime = database_runtime
     app.state.workflow_runtime = None
     try:
+        workflow_repository = (
+            PostgresWorkflowRepository(database_runtime)
+            if settings.workflow_repository_backend == "postgres"
+            else None
+        )
         workflow_runtime = WorkflowRuntime(
-            repository=get_incident_repository(settings)
+            repository=get_incident_repository(settings),
+            workflow_repository=workflow_repository,
         )
         app.state.workflow_runtime = workflow_runtime
         yield

@@ -198,6 +198,7 @@ services:
 
       DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-clustermind_app}:${POSTGRES_PASSWORD:-clustermind-development-password}@clustermind-postgres:5432/${POSTGRES_DB:-clustermind}"
       DATABASE_CONNECT_TIMEOUT_SECONDS: "${DATABASE_CONNECT_TIMEOUT_SECONDS:-5}"
+      WORKFLOW_REPOSITORY_BACKEND: "${CLUSTERMIND_WORKFLOW_REPOSITORY_BACKEND:-postgres}"
 
       OLLAMA_BASE_URL: "http://host.docker.internal:11434"
       OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.1:8b}"

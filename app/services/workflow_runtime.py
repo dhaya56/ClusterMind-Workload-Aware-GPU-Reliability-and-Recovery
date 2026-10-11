@@ -4,7 +4,19 @@ from collections import defaultdict
 from pathlib import Path
 from threading import BoundedSemaphore, Lock, RLock
 
-from app.agents.workflow import ClusterMindWorkflow
+from app.agents.workflow import (
+    ClusterMindWorkflow,
+    WorkflowConflictError,
+    WorkflowError,
+    WorkflowNotFoundError,
+    WorkflowStoreProtocol,
+)
+from app.db.repositories import (
+    PostgresWorkflowRepository,
+    WorkflowRepositoryConflictError,
+    WorkflowRepositoryError,
+    WorkflowRepositoryNotFoundError,
+)
 from app.schemas.agents import ApprovalDecision, WorkflowResult
 from app.services.incidents import IncidentRepository, get_incident_repository
 
@@ -17,14 +29,25 @@ class WorkflowRuntime:
         repository: IncidentRepository | None = None,
         *,
         store_directory: Path | None = None,
+        workflow_repository: WorkflowStoreProtocol | None = None,
         max_concurrent_analyses: int = 1,
     ) -> None:
         if isinstance(max_concurrent_analyses, bool) or max_concurrent_analyses < 1:
             raise ValueError("max_concurrent_analyses must be a positive integer")
         self.repository = repository or get_incident_repository()
+        if workflow_repository is not None and store_directory is not None:
+            raise ValueError(
+                "Provide workflow_repository or store_directory, not both"
+            )
         self.workflow = ClusterMindWorkflow(
             repository=self.repository,
+            store=workflow_repository,
             store_directory=store_directory,
+        )
+        self.workflow_store_detail = (
+            "postgresql"
+            if isinstance(self.workflow.store, PostgresWorkflowRepository)
+            else str(self.workflow.store.directory)
         )
         self._analysis_slots = BoundedSemaphore(max_concurrent_analyses)
         self._decision_lock = RLock()
@@ -60,6 +83,20 @@ class WorkflowRuntime:
         reason: str | None,
     ) -> WorkflowResult:
         with self._decision_lock:
+            if isinstance(self.workflow.store, PostgresWorkflowRepository):
+                try:
+                    return self.workflow.store.decide(
+                        workflow_id,
+                        decision=decision,
+                        actor=actor,
+                        reason=reason,
+                    )
+                except WorkflowRepositoryNotFoundError as exc:
+                    raise WorkflowNotFoundError(str(exc)) from exc
+                except WorkflowRepositoryConflictError as exc:
+                    raise WorkflowConflictError(str(exc)) from exc
+                except WorkflowRepositoryError as exc:
+                    raise WorkflowError(str(exc)) from exc
             return self.workflow.decide(
                 workflow_id,
                 decision=decision,

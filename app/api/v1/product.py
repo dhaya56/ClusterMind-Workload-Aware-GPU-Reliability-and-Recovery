@@ -287,7 +287,7 @@ async def platform_status(runtime: RuntimeDependency) -> PlatformStatusResponse:
         PlatformComponent(
             name="workflow_store",
             status="healthy",
-            detail=str(runtime.workflow.store.directory),
+            detail=runtime.workflow_store_detail,
         )
     )
     overall = (

@@ -64,6 +64,8 @@ class Settings(BaseSettings):
         le=86400,
     )
 
+    workflow_repository_backend: Literal["json", "postgres"] = "json"
+
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b"
     ollama_timeout_seconds: int = Field(default=120, ge=1)
