@@ -12,6 +12,7 @@ from redis.asyncio import Redis
 from app.core.config import Settings, get_settings
 from app.db import DatabaseRuntime
 from app.schemas.health import ComponentHealth, HealthResponse, ReadinessResponse
+from app.tasks.celery_app import celery_app
 
 
 router = APIRouter(tags=["health"])
@@ -212,10 +213,43 @@ async def _redis_health(settings: Settings) -> ComponentHealth:
             await client.aclose()
 
 
+async def _celery_worker_health() -> ComponentHealth:
+    started_at = perf_counter()
+    try:
+        inspector = celery_app.control.inspect(timeout=3.0)
+        responses = await asyncio.to_thread(inspector.ping)
+        responses = responses or {}
+        healthy = [
+            worker
+            for worker, reply in responses.items()
+            if reply.get("ok") == "pong"
+        ]
+        if not healthy:
+            return ComponentHealth(
+                name="celery_worker",
+                status="unavailable",
+                message="No Celery worker responded",
+                latency_ms=_elapsed_ms(started_at),
+            )
+        return ComponentHealth(
+            name="celery_worker",
+            status="healthy",
+            message=f"{len(healthy)} worker(s) available",
+            latency_ms=_elapsed_ms(started_at),
+        )
+    except Exception as exc:
+        return ComponentHealth(
+            name="celery_worker",
+            status="unavailable",
+            message=f"Worker inspection failed: {type(exc).__name__}",
+            latency_ms=_elapsed_ms(started_at),
+        )
+
+
 def _overall_readiness(
     components: list[ComponentHealth],
 ) -> tuple[str, bool]:
-    required_names = {"dataset", "detector", "postgresql"}
+    required_names = {"dataset", "detector", "postgresql", "celery_worker"}
     required_unavailable = any(
         component.name in required_names and component.status == "unavailable"
         for component in components
@@ -264,6 +298,7 @@ async def readiness(
         _database_health(request),
         _influxdb_health(settings),
         _redis_health(settings),
+        _celery_worker_health(),
         _ollama_health(settings),
     )
     components = local_components + list(external_components)

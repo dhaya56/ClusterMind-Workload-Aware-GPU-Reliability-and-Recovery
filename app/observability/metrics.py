@@ -4,6 +4,10 @@ from time import perf_counter
 
 from fastapi import FastAPI, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+from sqlalchemy import func, select
+
+from app.db.models import OutboxEvent, WorkflowRun
+from app.db.session import DatabaseRuntime
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.routing import Match
 
@@ -32,6 +36,57 @@ APPLICATION_INFO = Gauge(
     "Static ClusterMind application information.",
     labelnames=("version", "environment"),
 )
+
+
+WORKFLOW_LIFECYCLE_TOTAL = Gauge(
+    "clustermind_workflow_lifecycle_total",
+    "Current workflows grouped by workflow and dispatch status.",
+    labelnames=("status", "dispatch_status"),
+)
+
+WORKFLOW_STALE_CLAIMS_TOTAL = Gauge(
+    "clustermind_workflow_stale_claims_total",
+    "Current claimed workflows with an expired heartbeat.",
+)
+
+OUTBOX_PENDING_TOTAL = Gauge(
+    "clustermind_outbox_pending_total",
+    "Current unpublished outbox events.",
+)
+
+
+def _refresh_database_metrics(app: FastAPI) -> None:
+    runtime = getattr(app.state, "database_runtime", None)
+    if not isinstance(runtime, DatabaseRuntime):
+        return
+    with runtime.read_session() as session:
+        rows = session.execute(
+            select(
+                WorkflowRun.status,
+                WorkflowRun.dispatch_status,
+                func.count(WorkflowRun.id),
+            ).group_by(WorkflowRun.status, WorkflowRun.dispatch_status)
+        ).all()
+        WORKFLOW_LIFECYCLE_TOTAL.clear()
+        for status_value, dispatch_status, count in rows:
+            WORKFLOW_LIFECYCLE_TOTAL.labels(
+                status=status_value,
+                dispatch_status=dispatch_status,
+            ).set(count)
+        stale = session.scalar(
+            select(func.count(WorkflowRun.id)).where(
+                WorkflowRun.dispatch_status == "claimed",
+                WorkflowRun.last_heartbeat_at
+                < func.timezone("utc", func.now()) - func.make_interval(0, 0, 0, 0, 0, 5),
+            )
+        )
+        pending = session.scalar(
+            select(func.count(OutboxEvent.id)).where(
+                OutboxEvent.published_at.is_(None)
+            )
+        )
+        WORKFLOW_STALE_CLAIMS_TOTAL.set(int(stale or 0))
+        OUTBOX_PENDING_TOTAL.set(int(pending or 0))
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
@@ -113,6 +168,7 @@ def configure_metrics(
         name="prometheus_metrics",
     )
     async def prometheus_metrics() -> Response:
+        _refresh_database_metrics(app)
         return Response(
             content=generate_latest(),
             media_type=CONTENT_TYPE_LATEST,
