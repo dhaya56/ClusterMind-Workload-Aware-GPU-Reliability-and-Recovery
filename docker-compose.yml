@@ -31,6 +31,33 @@ services:
     networks:
       - clustermind-network
 
+  clustermind-postgres:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    ports:
+      - "${CLUSTERMIND_POSTGRES_HOST_PORT:-15432}:5432"
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-clustermind}"
+      POSTGRES_USER: "${POSTGRES_USER:-clustermind_app}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-clustermind-development-password}"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - clustermind-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1 -p 5432"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    stop_grace_period: 30s
+    shm_size: "256mb"
+    security_opt:
+      - "no-new-privileges:true"
+    networks:
+      - clustermind-network
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -169,6 +196,9 @@ services:
       CELERY_BROKER_URL: "redis://redis:6379/0"
       CELERY_RESULT_BACKEND: "redis://redis:6379/1"
 
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-clustermind_app}:${POSTGRES_PASSWORD:-clustermind-development-password}@clustermind-postgres:5432/${POSTGRES_DB:-clustermind}"
+      DATABASE_CONNECT_TIMEOUT_SECONDS: "${DATABASE_CONNECT_TIMEOUT_SECONDS:-5}"
+
       OLLAMA_BASE_URL: "http://host.docker.internal:11434"
       OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.1:8b}"
       OLLAMA_TIMEOUT_SECONDS: "${OLLAMA_TIMEOUT_SECONDS:-120}"
@@ -192,6 +222,8 @@ services:
       influxdb:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      clustermind-postgres:
         condition: service_healthy
       otel-collector:
         condition: service_healthy
@@ -301,3 +333,6 @@ volumes:
 
   clustermind-ntfy-data:
     name: clustermind-ntfy-data
+
+  clustermind-postgres-data:
+    name: clustermind-postgres-data

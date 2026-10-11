@@ -21,6 +21,12 @@ uvicorn[standard]
 pydantic
 pydantic-settings
 
+
+# PostgreSQL persistence and migrations
+SQLAlchemy==2.1.4
+alembic==1.20.0
+psycopg[binary,pool]==3.3.6
+
 # Redis and Celery background task processing
 celery
 redis

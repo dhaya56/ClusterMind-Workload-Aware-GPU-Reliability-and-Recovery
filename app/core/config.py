@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/1"
 
+
+    database_url: str = (
+        "postgresql+psycopg://clustermind_app:"
+        "clustermind-development-password@localhost:15432/clustermind"
+    )
+    database_connect_timeout_seconds: int = Field(default=5, ge=1, le=60)
+
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b"
     ollama_timeout_seconds: int = Field(default=120, ge=1)
