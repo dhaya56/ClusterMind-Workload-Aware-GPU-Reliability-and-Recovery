@@ -257,12 +257,13 @@ class PostgresWorkflowRepository:
                     session.flush()
                     event_type = "workflow.created"
                 else:
-                    persisted = _row_to_result(existing)
-                    if (
-                        persisted.model_dump(mode="json")
-                        == validated.model_dump(mode="json")
-                    ):
-                        return
+                    if existing.status not in {"queued", "running"}:
+                        persisted = _row_to_result(existing)
+                        if (
+                            persisted.model_dump(mode="json")
+                            == validated.model_dump(mode="json")
+                        ):
+                            return
                     if (
                         existing.approval_decisions
                         and validated.approval is None

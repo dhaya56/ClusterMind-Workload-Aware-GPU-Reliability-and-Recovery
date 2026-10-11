@@ -265,6 +265,16 @@ services:
       REDIS_URL: "redis://redis:6379/0"
       CELERY_BROKER_URL: "redis://redis:6379/0"
       CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-clustermind_app}:${POSTGRES_PASSWORD:-clustermind-development-password}@clustermind-postgres:5432/${POSTGRES_DB:-clustermind}"
+      DATABASE_CONNECT_TIMEOUT_SECONDS: "${DATABASE_CONNECT_TIMEOUT_SECONDS:-5}"
+      WORKFLOW_REPOSITORY_BACKEND: "postgres"
+      DATA_DIRECTORY: "/app/data/generated"
+      ARTIFACT_DIRECTORY: "/app/data/artifacts"
+      MODEL_ARTIFACT_DIRECTORY: "/app/app/ml/artifacts"
+      RUNBOOK_DIRECTORY: "/app/runbooks"
+      OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.1:8b}"
+      OLLAMA_TIMEOUT_SECONDS: "${OLLAMA_TIMEOUT_SECONDS:-120}"
       CELERY_WORKER_CONCURRENCY: "${CELERY_WORKER_CONCURRENCY:-1}"
       CELERY_TASK_SOFT_TIME_LIMIT_SECONDS: "${CELERY_TASK_SOFT_TIME_LIMIT_SECONDS:-300}"
       CELERY_TASK_TIME_LIMIT_SECONDS: "${CELERY_TASK_TIME_LIMIT_SECONDS:-360}"
@@ -274,8 +284,12 @@ services:
       OTEL_ENABLED: "${OTEL_ENABLED:-true}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
       OTEL_EXPORTER_OTLP_INSECURE: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       redis:
+        condition: service_healthy
+      clustermind-postgres:
         condition: service_healthy
       otel-collector:
         condition: service_healthy
