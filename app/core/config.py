@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/1"
 
+    celery_worker_concurrency: int = Field(default=1, ge=1, le=32)
+    celery_task_soft_time_limit_seconds: int = Field(default=300, ge=10, le=3600)
+    celery_task_time_limit_seconds: int = Field(default=360, ge=20, le=3900)
+    celery_result_expires_seconds: int = Field(default=3600, ge=60, le=86400)
+    celery_visibility_timeout_seconds: int = Field(default=720, ge=60, le=86400)
+    celery_worker_service_name: str = "clustermind-worker"
+
 
     database_url: str = (
         "postgresql+psycopg://clustermind_app:"

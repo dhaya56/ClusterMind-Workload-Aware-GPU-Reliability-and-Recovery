@@ -241,6 +241,60 @@ services:
     networks:
       - clustermind-network
 
+  clustermind-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command:
+      - "python"
+      - "-m"
+      - "celery"
+      - "-A"
+      - "app.tasks.celery_app:celery_app"
+      - "worker"
+      - "--loglevel=INFO"
+      - "--queues=clustermind.analysis"
+      - "--concurrency=${CELERY_WORKER_CONCURRENCY:-1}"
+      - "--hostname=clustermind-worker@%h"
+    environment:
+      APP_NAME: "${APP_NAME:-ClusterMind}"
+      APP_VERSION: "${APP_VERSION:-0.1.0}"
+      APP_ENVIRONMENT: "${APP_ENVIRONMENT:-development}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+      CELERY_WORKER_CONCURRENCY: "${CELERY_WORKER_CONCURRENCY:-1}"
+      CELERY_TASK_SOFT_TIME_LIMIT_SECONDS: "${CELERY_TASK_SOFT_TIME_LIMIT_SECONDS:-300}"
+      CELERY_TASK_TIME_LIMIT_SECONDS: "${CELERY_TASK_TIME_LIMIT_SECONDS:-360}"
+      CELERY_RESULT_EXPIRES_SECONDS: "${CELERY_RESULT_EXPIRES_SECONDS:-3600}"
+      CELERY_VISIBILITY_TIMEOUT_SECONDS: "${CELERY_VISIBILITY_TIMEOUT_SECONDS:-720}"
+      CELERY_WORKER_SERVICE_NAME: "${CELERY_WORKER_SERVICE_NAME:-clustermind-worker}"
+      OTEL_ENABLED: "${OTEL_ENABLED:-true}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+    depends_on:
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-m"
+        - "app.tasks.health"
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 40s
+    security_opt:
+      - "no-new-privileges:true"
+    networks:
+      - clustermind-network
+
   grafana:
     image: grafana/grafana-oss:11.5.1
     restart: unless-stopped
