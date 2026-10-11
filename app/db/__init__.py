@@ -10,3 +10,11 @@ __all__ = [
     "DatabaseRuntime",
     "DatabaseRuntimeError",
 ]
+
+from app.db.models import (
+    AgentExecutionRecord,
+    ApprovalDecisionRecord,
+    AuditEvent,
+    OutboxEvent,
+    WorkflowRun,
+)
