@@ -15,6 +15,18 @@ class AnalyzeIncidentRequest(BaseModel):
     force: bool = False
 
 
+class AnalysisDispatchResponse(BaseModel):
+    """Accepted durable asynchronous analysis request."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_id: str
+    task_id: str
+    status: Literal["queued", "running"]
+    dispatch_status: Literal["pending", "dispatched", "claimed"]
+    status_url: str
+
+
 class WorkflowDecisionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

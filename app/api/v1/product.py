@@ -11,8 +11,19 @@ from app.agents.workflow import (
     WorkflowError,
     WorkflowNotFoundError,
 )
+from app.db import DatabaseRuntime
+from app.db.repositories import (
+    WorkflowLifecycleRepository,
+    WorkflowRepositoryConflictError,
+    WorkflowRepositoryError,
+)
+from app.services.analysis_dispatcher import (
+    AnalysisDispatchError,
+    AnalysisDispatcher,
+)
 from app.schemas.agents import WorkflowResult, utc_now
 from app.schemas.api import (
+    AnalysisDispatchResponse,
     AnalyzeIncidentRequest,
     IncidentDetailResponse,
     IncidentListItem,
@@ -138,32 +149,58 @@ async def incident_detail(
 
 @router.post(
     "/incidents/{incident_id}/analyze",
-    response_model=WorkflowResult,
-    status_code=status.HTTP_200_OK,
+    response_model=AnalysisDispatchResponse,
+    status_code=status.HTTP_202_ACCEPTED,
 )
 async def analyze_incident(
     incident_id: str,
     request_body: AnalyzeIncidentRequest,
     runtime: RuntimeDependency,
-) -> WorkflowResult:
+    request: Request,
+) -> AnalysisDispatchResponse:
+    if request_body.force:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Forced asynchronous reanalysis is not enabled",
+        )
+
+    database_runtime = getattr(request.app.state, "database_runtime", None)
+    if not isinstance(database_runtime, DatabaseRuntime):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database runtime is not available",
+        )
+
     try:
-        return await run_in_threadpool(
-            runtime.analyze,
+        await run_in_threadpool(runtime.repository.get_incident, incident_id)
+        dispatcher = AnalysisDispatcher(
+            WorkflowLifecycleRepository(database_runtime)
+        )
+        dispatched = await run_in_threadpool(
+            dispatcher.dispatch,
             incident_id,
             use_llm=request_body.use_llm,
-            force=request_body.force,
+        )
+        return AnalysisDispatchResponse(
+            workflow_id=dispatched.workflow_id,
+            task_id=dispatched.task_id,
+            status=dispatched.status,
+            dispatch_status=dispatched.dispatch_status,
+            status_url=(
+                f"/api/v1/workflows/{dispatched.workflow_id}"
+            ),
         )
     except IncidentRepositoryError as exc:
         raise _repository_error(exc) from exc
-    except WorkflowConflictError as exc:
+    except WorkflowRepositoryConflictError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
-    except WorkflowError as exc:
+    except (AnalysisDispatchError, WorkflowRepositoryError) as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Incident analysis failed safely",
+            detail="Incident analysis could not be queued safely",
         ) from exc
 
 
