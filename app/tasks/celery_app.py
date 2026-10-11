@@ -14,7 +14,7 @@ celery_app = Celery(
     "clustermind",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=("app.tasks.probe_tasks", "app.tasks.workflow_tasks"),
+    include=("app.tasks.probe_tasks", "app.tasks.workflow_tasks", "app.tasks.outbox_tasks"),
 )
 
 celery_app.conf.update(
