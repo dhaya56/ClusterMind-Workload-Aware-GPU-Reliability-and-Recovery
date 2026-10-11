@@ -86,6 +86,29 @@ class WorkflowRun(Base):
             name="workflow_execution_status_allowed",
         ),
         CheckConstraint("version >= 1", name="workflow_version_positive"),
+        CheckConstraint(
+            "dispatch_status IN ('not_dispatched','pending','dispatched','claimed','completed','failed')",
+            name="dispatch_status_allowed",
+        ),
+        CheckConstraint("retry_count >= 0", name="retry_count_nonnegative"),
+        CheckConstraint(
+            "dispatch_status NOT IN ('dispatched','claimed','completed') OR task_id IS NOT NULL",
+            name="dispatched_requires_task",
+        ),
+        CheckConstraint(
+            "dispatch_status != 'claimed' OR (worker_id IS NOT NULL AND claimed_at IS NOT NULL)",
+            name="claimed_requires_worker",
+        ),
+        CheckConstraint(
+            "dispatch_error IS NULL OR dispatch_status = 'failed'",
+            name="dispatch_error_state",
+        ),
+        CheckConstraint(
+            "(dispatched_at IS NULL OR queued_at IS NULL OR dispatched_at >= queued_at) "
+            "AND (claimed_at IS NULL OR dispatched_at IS NULL OR claimed_at >= dispatched_at) "
+            "AND (last_heartbeat_at IS NULL OR claimed_at IS NULL OR last_heartbeat_at >= claimed_at)",
+            name="async_timestamp_order",
+        ),
         CheckConstraint("jsonb_typeof(errors) = 'array'", name="workflow_errors_array"),
         CheckConstraint("jsonb_typeof(metadata) = 'object'", name="workflow_metadata_object"),
         CheckConstraint("telemetry_result IS NULL OR jsonb_typeof(telemetry_result) = 'object'", name="workflow_telemetry_object"),
@@ -97,6 +120,16 @@ class WorkflowRun(Base):
         UniqueConstraint("workflow_id", name="uq_workflow_runs_workflow_public_id"),
         Index("ix_workflow_runs_incident_updated", "incident_id", "updated_at"),
         Index("ix_workflow_runs_status_updated", "status", "updated_at"),
+        Index(
+            "ix_workflow_runs_dispatch_status_queued",
+            "dispatch_status",
+            "queued_at",
+        ),
+        Index(
+            "ix_workflow_runs_stale_claims",
+            "last_heartbeat_at",
+            postgresql_where=text("dispatch_status = 'claimed'"),
+        ),
         Index(
             "uq_workflow_runs_active_incident",
             "incident_id",
@@ -120,6 +153,25 @@ class WorkflowRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=_utc_server_now())
     trace_id: Mapped[str | None] = mapped_column(String(32))
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    task_id: Mapped[str | None] = mapped_column(String(150), unique=True)
+    dispatch_status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="not_dispatched",
+        server_default="not_dispatched",
+    )
+    queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    worker_id: Mapped[str | None] = mapped_column(String(150))
+    retry_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+    dispatch_error: Mapped[str | None] = mapped_column(String(1000))
     failure_code: Mapped[str | None] = mapped_column(String(100))
     failure_summary: Mapped[str | None] = mapped_column(String(1000))
     telemetry_result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
