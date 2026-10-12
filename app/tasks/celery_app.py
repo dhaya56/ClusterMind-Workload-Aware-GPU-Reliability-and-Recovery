@@ -14,7 +14,7 @@ celery_app = Celery(
     "clustermind",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=("app.tasks.probe_tasks", "app.tasks.workflow_tasks", "app.tasks.outbox_tasks"),
+    include=("app.tasks.probe_tasks", "app.tasks.workflow_tasks", "app.tasks.outbox_tasks", "app.tasks.recovery_tasks"),
 )
 
 celery_app.conf.update(
@@ -45,6 +45,10 @@ celery_app.conf.update(
             "queue": ANALYSIS_QUEUE,
             "routing_key": ANALYSIS_QUEUE,
         },
+        "clustermind.recover_workflows": {
+            "queue": ANALYSIS_QUEUE,
+            "routing_key": ANALYSIS_QUEUE,
+        },
     },
     task_acks_late=True,
     task_acks_on_failure_or_timeout=True,
@@ -53,6 +57,15 @@ celery_app.conf.update(
         "publish-outbox-events": {
             "task": "clustermind.publish_outbox",
             "schedule": settings.celery_outbox_interval_seconds,
+            "kwargs": {"limit": 20},
+            "options": {
+                "queue": ANALYSIS_QUEUE,
+                "routing_key": ANALYSIS_QUEUE,
+            },
+        },
+        "recover-stale-workflows": {
+            "task": "clustermind.recover_workflows",
+            "schedule": settings.celery_workflow_recovery_interval_seconds,
             "kwargs": {"limit": 20},
             "options": {
                 "queue": ANALYSIS_QUEUE,

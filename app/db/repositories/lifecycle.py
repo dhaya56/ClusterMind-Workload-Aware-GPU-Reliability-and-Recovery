@@ -27,6 +27,7 @@ class WorkflowLifecycleState:
     task_id: str | None
     worker_id: str | None
     retry_count: int
+    requested_use_llm: bool
     version: int
     updated_at: datetime
     queued_at: datetime | None
@@ -46,6 +47,7 @@ def _snapshot(row: WorkflowRun) -> WorkflowLifecycleState:
         task_id=row.task_id,
         worker_id=row.worker_id,
         retry_count=row.retry_count,
+        requested_use_llm=row.requested_use_llm,
         version=row.version,
         updated_at=row.updated_at,
         queued_at=row.queued_at,
@@ -476,6 +478,28 @@ class WorkflowLifecycleRepository:
             raise
         except SQLAlchemyError as exc:
             raise WorkflowRepositoryError("Unable to fail workflow task") from exc
+
+
+    def list_pending(
+        self,
+        *,
+        limit: int = 100,
+    ) -> tuple[WorkflowLifecycleState, ...]:
+        if isinstance(limit, bool) or not 1 <= limit <= 1000:
+            raise WorkflowRepositoryError("limit must be between 1 and 1000")
+        try:
+            with self.runtime.read_session() as session:
+                rows = session.scalars(
+                    select(WorkflowRun)
+                    .where(WorkflowRun.dispatch_status == "pending")
+                    .order_by(WorkflowRun.queued_at, WorkflowRun.id)
+                    .limit(limit)
+                ).all()
+                return tuple(_snapshot(row) for row in rows)
+        except SQLAlchemyError as exc:
+            raise WorkflowRepositoryError(
+                "Unable to list pending workflows"
+            ) from exc
 
     def recover_stale_claims(
         self,
