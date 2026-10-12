@@ -16,6 +16,7 @@ from app.db.repositories import (
     WorkflowLifecycleRepository,
     WorkflowRepositoryConflictError,
     WorkflowRepositoryError,
+    WorkflowRepositoryNotFoundError,
 )
 from app.services.analysis_dispatcher import (
     AnalysisDispatchError,
