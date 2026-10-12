@@ -1,0 +1,1661 @@
+{
+  "id": null,
+  "uid": "clustermind-overview",
+  "title": "ClusterMind Command Center",
+  "tags": [
+    "clustermind",
+    "gpu",
+    "agentic-ai",
+    "sre",
+    "review-2"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 40,
+  "version": 2,
+  "refresh": "1m",
+  "editable": true,
+  "graphTooltip": 1,
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "weekStart": "monday",
+  "time": {
+    "from": "2026-01-01T00:00:00Z",
+    "to": "2026-01-08T00:00:00Z"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ],
+    "time_options": [
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d"
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "node",
+        "label": "GPU Node",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "clustermind-influxdb"
+        },
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"gpu_telemetry\", tag: \"node_id\", predicate: (r) => r._measurement == \"gpu_telemetry\", start: 0)",
+        "refresh": 1,
+        "includeAll": true,
+        "allValue": "All",
+        "multi": false,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "gpu-node-05",
+          "value": "gpu-node-05"
+        },
+        "options": []
+      },
+      {
+        "name": "gpu",
+        "label": "GPU",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "clustermind-influxdb"
+        },
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"gpu_telemetry\", tag: \"gpu_id\", predicate: (r) => r._measurement == \"gpu_telemetry\" and (\"${node}\" == \"All\" or r.node_id == \"${node}\"), start: 0)",
+        "refresh": 1,
+        "includeAll": true,
+        "allValue": "All",
+        "multi": false,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "gpu-01",
+          "value": "gpu-01"
+        },
+        "options": []
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "links": [
+    {
+      "title": "ClusterMind API",
+      "type": "link",
+      "url": "http://localhost:18000/docs",
+      "targetBlank": true,
+      "icon": "external link"
+    },
+    {
+      "title": "Jaeger",
+      "type": "link",
+      "url": "http://localhost:16686",
+      "targetBlank": true,
+      "icon": "external link"
+    },
+    {
+      "title": "Prometheus",
+      "type": "link",
+      "url": "http://localhost:19090",
+      "targetBlank": true,
+      "icon": "external link"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"border-radius:18px;padding:18px 22px;background:linear-gradient(120deg,#10172a 0%,#162d55 48%,#5b21b6 100%);box-shadow:0 10px 30px rgba(0,0,0,.32);color:white;font-family:Inter,Segoe UI,sans-serif\">\n<div style=\"display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap\">\n<div><div style=\"font-size:12px;letter-spacing:.2em;color:#93c5fd;font-weight:700\">MULTI-AGENT GPU OPERATIONS</div><div style=\"font-size:30px;font-weight:800;margin-top:4px\">ClusterMind Command Center</div><div style=\"color:#dbeafe;margin-top:5px\">GPU workload assurance, anomaly detection, incident intelligence, and human-approved recovery.</div></div>\n<div style=\"display:flex;gap:9px;flex-wrap:wrap\"><a href=\"/d/clustermind-overview/clustermind-command-center\" style=\"background:#2563eb;color:white;padding:9px 13px;border-radius:10px;text-decoration:none;font-weight:700\">Refresh Dashboard</a><a href=\"http://localhost:18000/docs\" target=\"_blank\" style=\"background:#0f766e;color:white;padding:9px 13px;border-radius:10px;text-decoration:none;font-weight:700\">API Explorer</a><a href=\"http://localhost:16686\" target=\"_blank\" style=\"background:#7c3aed;color:white;padding:9px 13px;border-radius:10px;text-decoration:none;font-weight:700\">Jaeger Traces</a><a href=\"http://localhost:19090\" target=\"_blank\" style=\"background:#b45309;color:white;padding:9px 13px;border-radius:10px;text-decoration:none;font-weight:700\">Prometheus</a></div>\n</div></div>"
+      },
+      "transparent": true
+    },
+    {
+      "id": 2,
+      "type": "row",
+      "title": "Cluster posture",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Observed GPUs",
+      "description": "Latest distinct node/GPU series in the selected range.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"gpu_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\")\n  |> group(columns: [\"node_id\", \"gpu_id\"])\n  |> last()\n  |> group()\n  |> count(column: \"_value\")",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Historical incidents",
+      "description": "Synthetic labeled incidents available for agent evaluation.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_incidents\" and r._field == \"gpu_hours_lost\")\n  |> group()\n  |> count(column: \"_value\")",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Detector anomaly samples",
+      "description": "High/critical candidates forwarded by the telemetry layer.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"detector_results\" and r._field == \"predicted_anomaly\" and r._value == true)\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> group()\n  |> count(column: \"_value\")",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Average GPU utilization",
+      "description": "",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"gpu_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> group()\n  |> mean(column: \"_value\")",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 7,
+      "type": "gauge",
+      "title": "Historical GPU health score",
+      "description": "State-based health score for the selected node/GPU scope.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"gpu_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> map(fn: (r) => ({ r with _value: if r.operating_state == \"normal\" then 100.0 else if r.operating_state == \"degraded\" then 55.0 else 10.0 }))\n  |> group()\n  |> mean(column: \"_value\")",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 85
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "textMode": "value_and_name",
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Live API availability",
+      "description": "Prometheus visibility of the ClusterMind API.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "clustermind-prometheus"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "clustermind_application_info",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "clustermind-prometheus"
+          },
+          "instant": true,
+          "range": false,
+          "expr": "max(clustermind_application_info)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true
+      },
+      "timeFrom": "15m"
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "GPU telemetry intelligence",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "GPU utilization",
+      "description": "Hover for per-GPU values; filter by node and GPU above.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"gpu_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "GPU and memory temperature",
+      "description": "",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 10,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and (r._field == \"gpu_temperature_c\" or r._field == \"memory_temperature_c\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id + \" / \" + r._field }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Memory utilization",
+      "description": "",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"memory_utilization_percent\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Power draw",
+      "description": "",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 18,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"power_draw_watts\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "SM clock",
+      "description": "Clock reductions help reveal throttling and power capping.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 18,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and r._field == \"sm_clock_mhz\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "hertz",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "NVLink throughput",
+      "description": "TX/RX degradation reveals distributed-training communication impact.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and (r._field == \"nvlink_tx_mbps\" or r._field == \"nvlink_rx_mbps\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id + \" / \" + r._field }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbps",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "ECC errors \u2014 zero means healthy",
+      "description": "Cumulative correctable and uncorrectable ECC error counts. A flat zero line means no ECC errors were observed for the selected GPU.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 25,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_telemetry\" and (r._field == \"ecc_correctable_errors\" or r._field == \"ecc_uncorrectable_errors\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id + \" / \" + r._field }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 3,
+            "fillOpacity": 8,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            },
+            "axisSoftMin": -0.25,
+            "axisSoftMax": 2
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "row",
+      "title": "Workload assurance and detector reasoning",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Workload throughput",
+      "description": "Workload Impact Agent input: productive work separates a healthy spike from harmful degradation.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"workload_telemetry\" and (r._field == \"training_throughput\" or r._field == \"tokens_per_second\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.assigned_node == \"${node}\")\n  |> drop(columns: [\"incident_id\", \"workload_status\", \"job_type\"])\n  |> group(columns: [\"job_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.job_id + \" / \" + r._field }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 16,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Isolation Forest anomaly score",
+      "description": "Candidate anomaly signal. Final incident decisions require workload-impact correlation.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 33,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"detector_results\" and r._field == \"anomaly_score\")\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\") |> filter(fn: (r) => \"${gpu}\" == \"All\" or r.gpu_id == \"${gpu}\")\n  |> drop(columns: [\"anomaly_label\", \"incident_id\", \"operating_state\", \"severity\", \"ground_truth_label\", \"predicted_anomaly\"])\n  |> group(columns: [\"node_id\", \"gpu_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r.gpu_id }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [],
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "table",
+      "title": "Incident command queue",
+      "description": "Evidence-backed incident ground truth used to evaluate agent diagnosis and recovery planning.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 41,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"gpu_incidents\" and r._field == \"gpu_hours_lost\")\n  |> group()\n  |> keep(columns: [\"_time\", \"incident_id\", \"node_id\", \"gpu_id\", \"incident_type\", \"severity\", \"root_cause\", \"affected_workload\", \"recovery_action\", \"incident_status\", \"_value\"])\n  |> rename(columns: {_time: \"Time\", _value: \"gpu_hours_lost\"})\n  |> sort(columns: [\"Time\"], desc: true)",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "severity"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "critical": {
+                        "color": "red",
+                        "index": 0
+                      },
+                      "high": {
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "medium": {
+                        "color": "yellow",
+                        "index": 2
+                      },
+                      "low": {
+                        "color": "blue",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "incident_status"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Time",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "row",
+      "title": "Multi-agent decision cockpit",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 51,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 22,
+      "type": "text",
+      "title": "Agent workflow and implementation status",
+      "gridPos": {
+        "x": 0,
+        "y": 52,
+        "w": 24,
+        "h": 7
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"font-family:Inter,Segoe UI,sans-serif;padding:4px\">\n<div style=\"display:grid;grid-template-columns:repeat(4,1fr);gap:12px\">\n<div style=\"padding:15px;border-radius:14px;background:linear-gradient(145deg,#0f3d5e,#075985);color:white\"><b>1. GPU Telemetry Agent</b><div style=\"margin-top:8px;color:#bae6fd\">Implemented baseline</div><div style=\"font-size:12px;margin-top:6px\">Isolation Forest, severity mapping, ECC/XID safety overrides.</div></div>\n<div style=\"padding:15px;border-radius:14px;background:linear-gradient(145deg,#3f2b1d,#9a3412);color:white\"><b>2. Workload Impact Agent</b><div style=\"margin-top:8px;color:#fed7aa\">Next wiring stage</div><div style=\"font-size:12px;margin-top:6px\">Correlates throughput, latency, checkpoints, and productive high utilization.</div></div>\n<div style=\"padding:15px;border-radius:14px;background:linear-gradient(145deg,#312e81,#6d28d9);color:white\"><b>3. Root Cause Agent</b><div style=\"margin-top:8px;color:#ddd6fe\">Planned integration</div><div style=\"font-size:12px;margin-top:6px\">Ollama-backed reasoning over structured GPU runbooks and incident evidence.</div></div>\n<div style=\"padding:15px;border-radius:14px;background:linear-gradient(145deg,#064e3b,#047857);color:white\"><b>4. Recovery Agent</b><div style=\"margin-top:8px;color:#a7f3d0\">Planned integration</div><div style=\"font-size:12px;margin-top:6px\">Human-approved checkpoint restore, migration, monitoring, and quarantine plans.</div></div>\n</div><div style=\"margin-top:12px;padding:12px;border-left:4px solid #f59e0b;background:rgba(245,158,11,.12);border-radius:8px\"><b>Human approval gate</b> remains mandatory. No live cluster action is executed autonomously.</div></div>"
+      },
+      "transparent": true
+    },
+    {
+      "id": 23,
+      "type": "row",
+      "title": "Platform observability",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 59,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "API request rate",
+      "description": "Prometheus request throughput by API route.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "clustermind-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 60,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "sum(rate(clustermind_http_requests_total[5m])) by (route)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "clustermind-prometheus"
+          },
+          "expr": "sum(rate(clustermind_http_requests_total[5m])) by (route)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 16,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ]
+        }
+      },
+      "timeFrom": "15m"
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "API p95 latency",
+      "description": "95th percentile API latency by route.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "clustermind-prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 60,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "histogram_quantile(0.95, sum(rate(clustermind_http_request_duration_seconds_bucket[5m])) by (le, route))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "clustermind-prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(clustermind_http_request_duration_seconds_bucket[5m])) by (le, route))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 16,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ]
+        }
+      },
+      "timeFrom": "15m"
+    },
+    {
+      "id": 26,
+      "type": "text",
+      "title": "Operations launchpad",
+      "gridPos": {
+        "x": 16,
+        "y": 60,
+        "w": 8,
+        "h": 7
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-family:Inter,Segoe UI,sans-serif\">\n<a href=\"http://localhost:16686\" target=\"_blank\" style=\"padding:16px;border-radius:13px;text-decoration:none;color:white;background:linear-gradient(135deg,#4338ca,#7c3aed)\"><b>Distributed traces</b><br><span style=\"font-size:12px;color:#ddd6fe\">Inspect FastAPI and future LangGraph spans in Jaeger</span></a>\n<a href=\"http://localhost:18000/docs\" target=\"_blank\" style=\"padding:16px;border-radius:13px;text-decoration:none;color:white;background:linear-gradient(135deg,#0369a1,#0891b2)\"><b>Operations API</b><br><span style=\"font-size:12px;color:#cffafe\">Explore health, telemetry, incidents, approvals, and agent endpoints</span></a>\n<a href=\"http://localhost:19090/targets\" target=\"_blank\" style=\"padding:16px;border-radius:13px;text-decoration:none;color:white;background:linear-gradient(135deg,#b45309,#ea580c)\"><b>Prometheus targets</b><br><span style=\"font-size:12px;color:#ffedd5\">Validate scrape health and service metrics</span></a>\n<a href=\"http://localhost:18080/clustermind-alerts\" target=\"_blank\" style=\"padding:16px;border-radius:13px;text-decoration:none;color:white;background:linear-gradient(135deg,#047857,#059669)\"><b>Notification channel</b><br><span style=\"font-size:12px;color:#d1fae5\">Self-hosted ntfy topic for critical incident notifications</span></a>\n</div>"
+      },
+      "transparent": true
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Node resource envelope",
+      "description": "CPU, host memory, and fan response provide node context around GPU incidents.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "clustermind-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 67,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"gpu_telemetry\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_telemetry\" and (r._field == \"cpu_utilization_percent\" or r._field == \"host_memory_percent\" or r._field == \"fan_speed_percent\"))\n  |> filter(fn: (r) => \"${node}\" == \"All\" or r.node_id == \"${node}\")\n  |> drop(columns: [\"incident_id\", \"node_health_status\"])\n  |> group(columns: [\"node_id\", \"_field\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.node_id + \" / \" + r._field }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "clustermind-influxdb"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 16,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ]
+        }
+      }
+    }
+  ]
+}

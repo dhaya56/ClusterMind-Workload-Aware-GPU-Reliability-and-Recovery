@@ -1,0 +1,64 @@
+schema_version: "1.0"
+runbook_id: "gpu.power_capping.v1"
+scenario: "power_capping"
+title: "GPU Power Capping"
+description: "GPU power draw approaches its enforced limit while clock frequency and useful throughput decline."
+severity_policy:
+  supported: [low, medium, high]
+  minimum_agent_confidence: 0.72
+symptoms:
+  - metric: power_draw_watts
+    operator: increase_from_baseline
+    threshold: 20.0
+    unit: watt
+    weight: 0.35
+  - metric: sm_clock_mhz
+    operator: decrease_from_baseline_percent
+    threshold: 10.0
+    unit: percent
+    weight: 0.35
+  - metric: training_throughput
+    operator: decrease_from_baseline_percent
+    threshold: 8.0
+    unit: percent
+    weight: 0.30
+probable_causes:
+  - cause: "gpu_power_limit_enforcement"
+    description: "Configured or platform-enforced power limits are constraining GPU clocks."
+    confidence_prior: 0.88
+  - cause: "workload_power_profile_mismatch"
+    description: "The workload's power behavior is incompatible with the configured limit."
+    confidence_prior: 0.65
+safety_checks:
+  - "Confirm the configured GPU and node power limits."
+  - "Verify node-level power and thermal headroom before changing policy."
+  - "Do not raise power limits automatically."
+recovery:
+  approval_required: true
+  checkpoint_required: false
+  expected_downtime_minutes: 5
+  risk_level: medium
+  actions:
+    - order: 1
+      action: review_power_profile
+      target: "affected_gpu"
+      description: "Compare actual draw, configured power limit, and workload profile."
+      reversible: true
+      rollback: "Restore the previously approved power configuration."
+    - order: 2
+      action: monitor
+      target: "affected_workload"
+      description: "Observe throughput and clocks while maintaining the current safe limit."
+      reversible: true
+      rollback: "Return to standard monitoring after stabilization."
+    - order: 3
+      action: migrate_workload
+      target: "healthy_node"
+      description: "Move the workload if power-policy constraints continue to reduce service quality."
+      reversible: true
+      rollback: "Move back only after policy and capacity validation."
+rollback_plan: "Keep the approved power limit unchanged and return the workload to its prior placement if migration validation fails."
+escalation_conditions:
+  - "The power cap is reached continuously for more than fifteen minutes."
+  - "Clock reduction causes a high or critical workload impact."
+  - "Node power telemetry indicates insufficient headroom."

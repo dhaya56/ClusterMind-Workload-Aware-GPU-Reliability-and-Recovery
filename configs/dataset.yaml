@@ -1,0 +1,173 @@
+dataset:
+  name: "clustermind_synthetic_gpu_telemetry"
+  version: "1.0.0"
+  synthetic: true
+  timezone: "UTC"
+  random_seed: 42
+
+generation_profiles:
+  development:
+    duration_days: 7
+    sampling_interval_minutes: 5
+    expected_gpu_rows: 80640
+    incident_count: 35
+
+  production_demo:
+    duration_days: 30
+    sampling_interval_minutes: 1
+    expected_gpu_rows: 1728000
+    incident_count: 150
+
+output:
+  directory: "data/generated"
+  format: "csv"
+  encoding: "utf-8"
+  timestamp_format: "%Y-%m-%dT%H:%M:%SZ"
+  include_header: true
+  overwrite_existing: false
+
+  files:
+    gpu_telemetry: "gpu_telemetry.csv"
+    node_telemetry: "node_telemetry.csv"
+    workloads: "workloads.csv"
+    incidents: "incidents.csv"
+    agent_evaluation: "agent_evaluation.csv"
+    generation_manifest: "generation_manifest.json"
+
+gpu_telemetry:
+  fields:
+    - "timestamp"
+    - "node_id"
+    - "gpu_id"
+    - "gpu_utilization_percent"
+    - "memory_utilization_percent"
+    - "gpu_temperature_c"
+    - "memory_temperature_c"
+    - "power_draw_watts"
+    - "sm_clock_mhz"
+    - "memory_clock_mhz"
+    - "ecc_correctable_errors"
+    - "ecc_uncorrectable_errors"
+    - "xid_error_code"
+    - "nvlink_tx_mbps"
+    - "nvlink_rx_mbps"
+    - "operating_state"
+    - "anomaly_label"
+    - "incident_id"
+
+node_telemetry:
+  fields:
+    - "timestamp"
+    - "node_id"
+    - "cpu_utilization_percent"
+    - "host_memory_percent"
+    - "disk_io_percent"
+    - "network_tx_mbps"
+    - "network_rx_mbps"
+    - "fan_speed_percent"
+    - "node_health_status"
+    - "active_workloads"
+    - "healthy_gpu_count"
+    - "incident_id"
+
+workloads:
+  fields:
+    - "timestamp"
+    - "job_id"
+    - "job_type"
+    - "priority"
+    - "assigned_node"
+    - "allocated_gpus"
+    - "workload_status"
+    - "checkpoint_available"
+    - "training_throughput"
+    - "tokens_per_second"
+    - "step_duration_ms"
+    - "training_loss"
+    - "inference_latency_ms"
+    - "error_rate_percent"
+    - "restart_count"
+    - "incident_id"
+
+  job_generation:
+    minimum_duration_minutes: 30
+    maximum_duration_minutes: 720
+    completed_job_probability: 0.65
+    failed_job_probability: 0.05
+    minimum_training_loss: 0.20
+    maximum_training_loss: 4.00
+
+incidents:
+  fields:
+    - "incident_id"
+    - "node_id"
+    - "gpu_id"
+    - "incident_type"
+    - "severity"
+    - "start_timestamp"
+    - "end_timestamp"
+    - "root_cause"
+    - "affected_workload"
+    - "gpu_hours_lost"
+    - "recovery_action"
+    - "incident_status"
+
+  severity_levels:
+    - "low"
+    - "medium"
+    - "high"
+    - "critical"
+
+  statuses:
+    - "detected"
+    - "investigating"
+    - "awaiting_approval"
+    - "resolved"
+
+  minimum_duration_minutes: 15
+  maximum_duration_minutes: 240
+  minimum_gap_minutes: 30
+  allow_overlapping_incidents_on_same_gpu: false
+
+agent_evaluation:
+  fields:
+    - "incident_id"
+    - "expected_root_cause"
+    - "expected_severity"
+    - "expected_recovery_action"
+    - "expected_workload_impact"
+    - "detection_timestamp"
+    - "ground_truth_label"
+
+scenario_distribution:
+  thermal_throttling: 0.20
+  ecc_memory_degradation: 0.15
+  memory_saturation: 0.20
+  power_capping: 0.15
+  nvlink_degradation: 0.15
+  idle_gpu_waste: 0.15
+
+healthy_control_scenarios:
+  enabled: true
+  healthy_high_utilization_count:
+    development: 10
+    production_demo: 40
+  label: "healthy_high_utilization"
+
+data_quality:
+  allow_missing_identifiers: false
+  allow_duplicate_gpu_records: false
+  allow_duplicate_incident_ids: false
+  clamp_percentages: true
+  percentage_minimum: 0.0
+  percentage_maximum: 100.0
+  prevent_negative_counters: true
+  validate_incident_time_order: true
+  validate_referential_integrity: true
+
+reproducibility:
+  deterministic_generation: true
+  record_random_seed: true
+  write_generation_manifest: true
+  record_configuration_hash: true
+  record_generation_timestamp: true

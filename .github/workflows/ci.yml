@@ -1,0 +1,194 @@
+name: ClusterMind CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-and-unit-tests:
+    name: Quality and unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --requirement requirements.txt
+          python -m pip install ruff==0.17.0
+
+      - name: Run critical Ruff checks
+        run: >-
+          python -m ruff check --isolated
+          --select E9,F63,F7,F82
+          app simulator scripts tests migrations
+
+      - name: Compile Python sources
+        run: python -m compileall -q app simulator scripts tests migrations
+
+      - name: Validate Alembic migration graph
+        shell: bash
+        run: |
+          python -m alembic heads
+          test "$(python -m alembic heads | grep -c '(head)')" -eq 1
+
+      - name: Run unit tests with coverage
+        env:
+          OTEL_ENABLED: "false"
+          WORKFLOW_REPOSITORY_BACKEND: json
+        run: >-
+          python -m pytest tests/unit -q
+          --cov=app --cov=simulator
+          --cov-report=term-missing
+          --cov-report=xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: coverage.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+  postgres-integration:
+    name: PostgreSQL integration tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17.11-alpine
+        env:
+          POSTGRES_DB: clustermind_test
+          POSTGRES_USER: clustermind_test
+          POSTGRES_PASSWORD: clustermind_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U clustermind_test -d clustermind_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+psycopg://clustermind_test:clustermind_test_password@localhost:5432/clustermind_test
+      WORKFLOW_REPOSITORY_BACKEND: postgres
+      RUN_POSTGRES_INTEGRATION: "1"
+      OTEL_ENABLED: "false"
+      NTFY_ENABLED: "false"
+      CELERY_BROKER_URL: redis://localhost:6379/0
+      CELERY_RESULT_BACKEND: redis://localhost:6379/1
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --requirement requirements.txt
+
+      - name: Generate deterministic development dataset
+        run: python scripts/generate_dataset.py --profile development --overwrite
+
+      - name: Train detector and generate analysis artifacts
+        run: python scripts/train_detector.py
+
+      - name: Apply migrations
+        run: python -m alembic upgrade head
+
+      - name: Verify migration revision
+        run: python -m alembic current
+
+      - name: Check model and migration alignment
+        run: python -m alembic check
+
+      - name: Run integration tests
+        run: python -m pytest tests/integration -q
+
+      - name: Verify integration cleanup
+        run: |
+          python - <<'PY'
+          import os
+          from sqlalchemy import create_engine, text
+
+          engine = create_engine(os.environ["DATABASE_URL"])
+          with engine.connect() as connection:
+              count = connection.execute(
+                  text(
+                      "SELECT count(*) FROM workflow_runs "
+                      "WHERE incident_id IN "
+                      "('INC-PYTEST-ASYNC', 'INC-2026-0034')"
+                  )
+              ).scalar_one()
+          engine.dispose()
+          assert count == 0, count
+          print("SUCCESS: integration fixtures cleaned up")
+          PY
+
+  docker-validation:
+    name: Docker validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install generation dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --requirement requirements.txt
+
+      - name: Generate deterministic development dataset
+        run: python scripts/generate_dataset.py --profile development --overwrite
+
+      - name: Train detector and generate analysis artifacts
+        run: python scripts/train_detector.py
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build API, worker, and Beat images
+        run: >-
+          docker compose build
+          clustermind-api
+          clustermind-worker
+          clustermind-beat

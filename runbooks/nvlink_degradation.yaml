@@ -1,0 +1,74 @@
+schema_version: "1.0"
+runbook_id: "gpu.nvlink_degradation.v1"
+scenario: "nvlink_degradation"
+title: "NVLink Degradation"
+description: "Inter-GPU link throughput declines and distributed workload synchronization becomes slower."
+severity_policy:
+  supported: [medium, high, critical]
+  minimum_agent_confidence: 0.80
+symptoms:
+  - metric: nvlink_tx_mbps
+    operator: decrease_from_baseline_percent
+    threshold: 30.0
+    unit: percent
+    weight: 0.30
+  - metric: nvlink_rx_mbps
+    operator: decrease_from_baseline_percent
+    threshold: 30.0
+    unit: percent
+    weight: 0.30
+  - metric: step_duration_ms
+    operator: increase_from_baseline_percent
+    threshold: 20.0
+    unit: percent
+    weight: 0.25
+  - metric: training_throughput
+    operator: decrease_from_baseline_percent
+    threshold: 15.0
+    unit: percent
+    weight: 0.15
+probable_causes:
+  - cause: "inter_gpu_link_degradation"
+    description: "NVLink communication performance has degraded between participating GPUs."
+    confidence_prior: 0.92
+  - cause: "distributed_synchronization_bottleneck"
+    description: "A communication or topology bottleneck is delaying distributed synchronization."
+    confidence_prior: 0.68
+safety_checks:
+  - "Confirm that TX and RX degradation occurs on the affected distributed path."
+  - "Verify destination topology before migrating distributed ranks."
+  - "Preserve a synchronized checkpoint before changing placement."
+recovery:
+  approval_required: true
+  checkpoint_required: true
+  expected_downtime_minutes: 20
+  risk_level: high
+  actions:
+    - order: 1
+      action: inspect_nvlink
+      target: "affected_node"
+      description: "Inspect NVLink counters, topology, and peer connectivity."
+      reversible: false
+    - order: 2
+      action: migrate_workload
+      target: "healthy_nvlink_domain"
+      description: "Move distributed ranks to GPUs with a validated NVLink topology."
+      reversible: true
+      rollback: "Stop the migrated ranks and restore prior placement from checkpoint."
+    - order: 3
+      action: resume_from_checkpoint
+      target: "affected_workload"
+      description: "Resume all distributed ranks from the same verified checkpoint."
+      reversible: true
+      rollback: "Stop all ranks and restore the previous synchronized checkpoint."
+    - order: 4
+      action: quarantine_node
+      target: "affected_node"
+      description: "Prevent distributed jobs from using the affected node until link validation passes."
+      reversible: true
+      rollback: "Return the node after NVLink diagnostics and communication testing."
+rollback_plan: "Stop all distributed ranks, retain the synchronized checkpoint, and restore the last known-good placement."
+escalation_conditions:
+  - "NVLink throughput remains below 50 percent of baseline after workload removal."
+  - "Distributed ranks cannot resume from a synchronized checkpoint."
+  - "Peer connectivity or topology validation fails."

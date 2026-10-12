@@ -21,9 +21,15 @@ uvicorn[standard]
 pydantic
 pydantic-settings
 
+
+# PostgreSQL persistence and migrations
+SQLAlchemy==2.1.4
+alembic==1.20.0
+psycopg[binary,pool]==3.3.6
+
 # Redis and Celery background task processing
-celery
-redis
+celery==5.6.3
+redis==8.1.0
 
 # Prometheus application metrics
 prometheus-client
@@ -51,3 +57,4 @@ truststore
 pytest
 pytest-asyncio
 pytest-cov
+streamlit==1.65.0

@@ -1,0 +1,179 @@
+detection:
+  model_name: "clustermind_isolation_forest"
+  model_version: "1.0.0"
+  algorithm: "isolation_forest"
+  random_seed: 42
+
+features:
+  ordered:
+    - "gpu_utilization_percent"
+    - "memory_utilization_percent"
+    - "gpu_temperature_c"
+    - "memory_temperature_c"
+    - "power_draw_watts"
+    - "sm_clock_mhz"
+    - "memory_clock_mhz"
+    - "ecc_correctable_errors"
+    - "ecc_uncorrectable_errors"
+    - "nvlink_tx_mbps"
+    - "nvlink_rx_mbps"
+
+  excluded:
+    - "timestamp"
+    - "node_id"
+    - "gpu_id"
+    - "operating_state"
+    - "anomaly_label"
+    - "incident_id"
+    - "xid_error_code"
+
+normal_operating_ranges:
+  gpu_utilization_percent:
+    minimum: 25.0
+    maximum: 98.0
+
+  memory_utilization_percent:
+    minimum: 20.0
+    maximum: 95.0
+
+  gpu_temperature_c:
+    minimum: 35.0
+    maximum: 82.0
+
+  memory_temperature_c:
+    minimum: 38.0
+    maximum: 88.0
+
+  power_draw_watts:
+    minimum: 70.0
+    maximum: 330.0
+
+  sm_clock_mhz:
+    minimum: 900.0
+    maximum: 1800.0
+
+  memory_clock_mhz:
+    minimum: 1200.0
+    maximum: 2000.0
+
+  ecc_correctable_errors:
+    minimum: 0
+    maximum: 2
+
+  ecc_uncorrectable_errors:
+    minimum: 0
+    maximum: 0
+
+  nvlink_tx_mbps:
+    minimum: 8000.0
+    maximum: 50000.0
+
+  nvlink_rx_mbps:
+    minimum: 8000.0
+    maximum: 50000.0
+
+correlation_rules:
+  utilization_to_power:
+    enabled: true
+    baseline_watts: 65.0
+    watts_per_utilization_percent: 2.65
+    noise_standard_deviation: 8.0
+
+  utilization_to_temperature:
+    enabled: true
+    baseline_temperature_c: 34.0
+    temperature_per_utilization_percent: 0.42
+    noise_standard_deviation: 2.0
+
+  gpu_to_memory_temperature:
+    enabled: true
+    temperature_offset_c: 4.0
+    noise_standard_deviation: 1.5
+
+  utilization_to_clock:
+    enabled: true
+    idle_clock_mhz: 850.0
+    active_clock_mhz: 1750.0
+    transition_utilization_percent: 30.0
+    noise_standard_deviation: 35.0
+
+  nvlink_balance:
+    enabled: true
+    maximum_directional_difference_percent: 12.0
+
+preprocessing:
+  missing_numeric_strategy: "median"
+  invalid_numeric_strategy: "reject"
+  scaling:
+    enabled: true
+    method: "standard"
+  clamp_percentages: true
+  prevent_negative_values: true
+
+training:
+  source_operating_state: "normal"
+  maximum_training_rows: 50000
+  minimum_training_rows: 5000
+  sample_randomly: true
+  random_seed: 42
+  contamination: 0.05
+  n_estimators: 200
+  max_samples: "auto"
+  max_features: 1.0
+  bootstrap: false
+  n_jobs: -1
+
+scoring:
+  higher_score_is_more_anomalous: true
+
+  severity_thresholds:
+    low: 0.45
+    medium: 0.60
+    high: 0.75
+    critical: 0.90
+
+  minimum_incident_severity: "high"
+
+deterministic_overrides:
+  uncorrectable_ecc_error:
+    condition: "ecc_uncorrectable_errors > 0"
+    minimum_severity: "critical"
+
+  xid_error:
+    condition: "xid_error_code != 0"
+    minimum_severity: "high"
+
+  extreme_temperature:
+    condition: "gpu_temperature_c >= 90"
+    minimum_severity: "critical"
+
+  severe_memory_temperature:
+    condition: "memory_temperature_c >= 95"
+    minimum_severity: "critical"
+
+artifacts:
+  directory: "app/ml/artifacts"
+  model_file: "isolation_forest.joblib"
+  scaler_file: "standard_scaler.joblib"
+  metadata_file: "detector_metadata.json"
+  feature_order_file: "feature_order.json"
+
+evaluation:
+  metrics:
+    - "precision"
+    - "recall"
+    - "f1_score"
+    - "false_positive_rate"
+    - "detection_lead_time_minutes"
+
+  positive_labels:
+    - "thermal_throttling"
+    - "ecc_memory_degradation"
+    - "memory_saturation"
+    - "power_capping"
+    - "nvlink_degradation"
+    - "idle_gpu_waste"
+
+  negative_labels:
+    - "normal"
+    - "healthy_high_utilization"

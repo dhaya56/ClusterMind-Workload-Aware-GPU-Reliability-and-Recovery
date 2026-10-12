@@ -1,0 +1,69 @@
+schema_version: "1.0"
+runbook_id: "gpu.ecc_memory_degradation.v1"
+scenario: "ecc_memory_degradation"
+title: "GPU ECC Memory Degradation"
+description: "Increasing correctable ECC errors or any uncorrectable ECC/XID memory event indicating GPU memory degradation."
+severity_policy:
+  supported: [medium, high, critical]
+  minimum_agent_confidence: 0.85
+symptoms:
+  - metric: ecc_correctable_errors
+    operator: monotonic_increase
+    threshold: 1
+    unit: count
+    weight: 0.30
+  - metric: ecc_uncorrectable_errors
+    operator: greater_than
+    threshold: 0
+    unit: count
+    weight: 0.40
+  - metric: xid_error_code
+    operator: non_zero
+    threshold: 0
+    unit: code
+    weight: 0.30
+probable_causes:
+  - cause: "gpu_memory_degradation"
+    description: "GPU memory is exhibiting correctable or uncorrectable ECC faults."
+    confidence_prior: 0.95
+  - cause: "transient_memory_fault"
+    description: "A transient memory fault occurred without sustained error growth."
+    confidence_prior: 0.55
+safety_checks:
+  - "Treat any uncorrectable ECC event as critical."
+  - "Preserve checkpoint and workload state before isolation."
+  - "Do not return the GPU to service without hardware diagnostics."
+recovery:
+  approval_required: true
+  checkpoint_required: true
+  expected_downtime_minutes: 20
+  risk_level: critical
+  actions:
+    - order: 1
+      action: migrate_workload
+      target: "healthy_gpu"
+      description: "Move the workload away from the affected GPU."
+      reversible: true
+      rollback: "Stop the migrated workload and retain the last verified checkpoint."
+    - order: 2
+      action: resume_from_checkpoint
+      target: "affected_workload"
+      description: "Resume from the latest verified checkpoint on the destination GPU."
+      reversible: true
+      rollback: "Stop the resumed workload and revert to the prior checkpoint reference."
+    - order: 3
+      action: quarantine_gpu
+      target: "affected_gpu"
+      description: "Remove the GPU from scheduling until hardware diagnostics are completed."
+      reversible: true
+      rollback: "Return the GPU only after diagnostic and burn-in validation."
+    - order: 4
+      action: escalate_to_operator
+      target: "hardware_operations"
+      description: "Open a hardware inspection or replacement request."
+      reversible: false
+rollback_plan: "Preserve workload checkpoints, stop unsafe execution, and use an alternate healthy GPU."
+escalation_conditions:
+  - "Any uncorrectable ECC error is present."
+  - "XID 48 or another memory-related XID event is present."
+  - "Correctable ECC errors continue increasing after workload removal."
